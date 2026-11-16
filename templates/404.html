@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{# Shown for any address that leads nowhere, including a page that exists #}
+{# but belongs to someone else. Django uses this file when DEBUG is off.   #}
+
+{% block title %}Page not found · Memory Room{% endblock %}
+
+{% block content %}
+  <h1>Page not found</h1>
+  <p>There is nothing at this address, or it is not yours to open.</p>
+  <p><a class="button" href="{% url 'home' %}">Go to the start</a></p>
+{% endblock %}

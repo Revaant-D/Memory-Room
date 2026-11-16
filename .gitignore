@@ -1,0 +1,23 @@
+# The Python environment and its caches
+.venv/
+__pycache__/
+*.pyc
+
+# Made when the app runs: the database, uploaded files, collected static files
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Secrets. The app creates .secret_key on first run; see config/secret.py
+.secret_key
+.env
+.env.*
+!.env.example
+
+# Model weights never go in git (class rule)
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.ckpt
