@@ -2,11 +2,15 @@
 
 What has been built, where it lives, how a request moves through it, and why each decision was made. One section per piece. Each section is added when its piece is built, so anything described here exists and has been run.
 
-**Last updated:** 16 Nov 2026, after chunk 1 of `docs/plans/2026-11-16-django-foundation.md`.
+**Last updated:** 18 Nov 2026: chunk 5 (photos, piece 7), the room import (piece 8) and the 3D room page (piece 9).
 
 ## What exists today
 
-A Django project that runs, with accounts: a person can sign up, log out and log in. Places, room videos, photos and the 3D room are not built yet.
+A Django project that runs. A person can sign up, log in and log out; keep a list of places (create, open, rename, delete); add or delete a room video on each place; and add many photos to a place at once, caption them, change their dates and delete them. A room built in Colab is attached to its scan with `manage.py import_room` (piece 8) and then opens as a 3D page with its photos as dots (piece 9). Nobody can open another person's places, photos or rooms. The four tables (Place, Scan, Memory, Pin) exist with their rules and are editable in `/admin/`. Nothing in the app writes a pin yet: pins come from the admin.
+
+A Colab notebook that builds the 3D room from a room video exists (piece 6) but has not been run on a real video yet.
+
+Pieces 3, 4 and 5 were applied on 17 Nov, and piece 7 on 18 Nov, without the builder present, at their request. Their calls have not been read out yet and their walk-throughs are owed (for the first draft, one combined walk-through). Each section says so at its top.
 
 ## Running it
 
@@ -21,7 +25,13 @@ All commands are run from the project folder, in PowerShell. They call the proje
 | Apply database changes | `.venv\Scripts\python.exe manage.py migrate` |
 | Open a Python prompt with the app loaded | `.venv\Scripts\python.exe manage.py shell` |
 
-There are 50 tests. All 50 passed on 16 Nov 2026.
+There are 229 tests. All 229 passed on 18 Nov 2026.
+
+| To do this | Run this |
+| --- | --- |
+| Attach a room built in Colab to a scan | `.venv\Scripts\python.exe manage.py import_room <scan number> <room folder or .zip>` (piece 8) |
+
+On 17 Nov the app was also checked with real HTTP requests against a running server (a throwaway copy with its own database): 20 of 20 checks passed. They covered sign-up, creating, renaming and deleting a place, the numbered and reserved addresses, a stand-in video upload and two refused files, another user getting a 404, a logged-out visitor sent to login, a POST without the security token refused, and `media/` empty after the deletes. No real phone video was used, and nothing was looked at in a browser.
 
 ## The layout
 
@@ -40,11 +50,26 @@ memory-room/
 │  ├─ 404.html                "page not found"
 │  └─ 500.html                "something went wrong"
 ├─ static/css/site.css        the one stylesheet
+├─ static/viewer/             the 3D viewer (roomviewer.js, loaders.js) and three.js in vendor/
 ├─ accounts/                  the user, sign-up, login, logout
-└─ rooms/                     today: the home page. Later: places, scans, memories, pins
+└─ rooms/                     places, scans, memories, pins
+   ├─ models.py               the four tables and their rules
+   ├─ slugs.py                the word in a place's address
+   ├─ signals.py              removes files from disk when their row goes
+   ├─ access.py               the owner checks: every page that loads a place, scan or photo goes through here
+   ├─ validators.py           the checks on an uploaded video or photo
+   ├─ photos.py               reads the date a photo was taken from inside the file
+   ├─ roomfolder.py           reads and checks a room built in Colab (folder or zip)
+   ├─ management/commands/import_room.py   attaches a built room to a scan
+   ├─ forms.py, views.py, urls.py, admin.py
+   ├─ templates/rooms/        the pages
+   ├─ migrations/
+   └─ tests/
 ```
 
-Made when the app runs and never put in git: `.venv/` (the libraries), `db.sqlite3` (the database), `.secret_key`, and later `media/` (uploads).
+Beside the app: `ai/` holds the AI part (piece 6), which Django does not import; `ai/README.md` describes it.
+
+Made when the app runs and never put in git: `.venv/` (the libraries), `db.sqlite3` (the database), `.secret_key`, `media/` (uploads), and `ai/dist/` (the code zip for Colab).
 
 ---
 
@@ -163,6 +188,496 @@ Logging out is `POST /accounts/logout/`, sent by the button in the header. Djang
 - No password reset, because no email address is collected.
 - No limit on repeated login or sign-up attempts.
 - Usernames are compared exactly at login: `Ana` cannot log in as `ana`. Sign-up does refuse a new `Ana` when `ana` exists.
+
+---
+
+## Piece 3: Data model
+
+**Status, 17 Nov 2026:** applied from `prebuilt/django/chunk2-models` while the builder was away, at their request ("I am not able to give time right now ... want you to start working"). The calls below have not yet been read out to the builder, and the plan's walk-through for chunk 2 is still owed. Either may change this piece.
+
+### What it does
+
+Holds everything the app remembers, in four tables. A **Place** is a room. A **Scan** is one filmed video of that room and, later, the 3D points built from it. A **Memory** is one photo taken there. A **Pin** says where one memory sits inside one scan.
+
+```
+User ──< Place ──< Scan ──< Pin >── Memory
+                └──────────────────< Memory          "──<" reads "has many"
+```
+
+| Table | Fields |
+| --- | --- |
+| Place | owner, name, slug (unique per owner), created |
+| Scan | place, video, taken_on, status (uploaded / building / ready / failed), points_file, created |
+| Memory | place, photo, caption, taken_on, created |
+| Pin | memory, scan, x, y, z (metres; floor is z = 0, z points up), placed_by (user / ai), created |
+
+No page uses these tables yet. They can be seen and edited in `/admin/`.
+
+### Where the code is
+
+| File | What it is |
+| --- | --- |
+| `rooms/models.py` | The four models, and the three functions that choose where an uploaded file is stored |
+| `rooms/slugs.py` | `unique_slug`: makes the word in a place's address |
+| `rooms/signals.py` | Removes a scan's or memory's files from disk after its row is deleted |
+| `rooms/apps.py` | `ready()` connects `signals.py` when Django starts |
+| `rooms/admin.py` | Puts the four models in the admin site |
+| `rooms/migrations/0001_place.py`, `0002_scan_memory.py`, `0003_pin.py` | Create the tables |
+| `rooms/tests/utils.py` | Test helpers: a user, a real tiny JPEG, a stand-in video, a temporary media folder |
+| `rooms/tests/test_models.py` | 28 tests |
+
+### How one request flows
+
+No page yet, so this traces a save. Saving a pin, from any code:
+
+1. `Pin.save()` calls `self.full_clean()` before anything is written.
+2. The field checks run: `placed_by` must be `user` or `ai`; x, y and z must be numbers.
+3. `Pin.clean()` runs: the memory's place and the scan's place must be the same, and x, y, z must be finite (not "not a number", not infinity).
+4. The unique rule runs: this memory must not already have a pin in this scan.
+5. If any check fails, `ValidationError` is raised and nothing is written. Otherwise the row is inserted.
+
+Saving a place for the first time: `Place.save()` sees an empty slug and calls `unique_slug(owner, name)`, which turns the name into a word (`Dorm Room 214` → `dorm-room-214`), cuts it to 70 characters, and adds `-2`, `-3`, ... while the word is `new` or this owner already uses it.
+
+Deleting a place: Django deletes its scans, memories and pins with it (`on_delete=CASCADE`), and after each scan or memory row goes, `rooms/signals.py` removes that row's files from `media/`.
+
+### The rules, and where each is enforced
+
+| Rule (§6 of the design) | Enforced by | Proved by |
+| --- | --- | --- |
+| A place's address word is unique for its owner | `UniqueConstraint` on `Place`; `unique_slug` | `test_same_name_same_owner_numbered`, `test_same_name_two_owners` |
+| A place can never sit at `/places/new/` | `RESERVED` in `rooms/slugs.py` | `test_reserved_word` |
+| A place's address survives a rename | `Place.save()` only sets an empty slug | `test_slug_kept_on_rename` |
+| A photo has at most one pin per scan | `UniqueConstraint` on `Pin` | `test_second_pin_same_scan_refused`, `test_one_pin_per_scan_allowed` |
+| A pin's photo and scan belong to the same place | `Pin.clean()` | `test_pin_across_places_refused` |
+| A pin says who placed it | `choices` on `placed_by`, checked in `Pin.save()` | `test_placed_by_must_be_stated` |
+| A pin's position is three real numbers | `Pin.clean()` | `test_coordinates_must_be_numbers` |
+| Deleting a scan deletes its pins and keeps the photos | `on_delete=CASCADE` on `Pin.scan` | `test_delete_scan_removes_pins_keeps_memory` |
+| The viewer shows the newest ready scan | `Place.newest_ready_scan()` | `test_newest_ready_scan` |
+| The phone's file name never reaches the disk | the three `*_path` functions | `test_stored_name_is_generated`, `test_video_stored_name` |
+| Deleted rows do not leave files behind | `rooms/signals.py` | the three `test_delete_*_removes_*` tests |
+
+### Decisions and why
+
+| Decision | Who, when | Why |
+| --- | --- | --- |
+| Pin is its own model: (memory, scan, x, y, z) | **Builder, 16 Nov** | A position only means something inside the scan it was measured in. Keeping it on its own row lets one photo have a position in every scan of its place, and lets a scan be deleted without touching the photo |
+| The field list and the rules above | **Builder, 16 Nov** (approved §6) | |
+| The slug is made once and never changes | Claude, 16 Nov | Old links keep working after a rename |
+| A taken or reserved slug gets a number | Claude, 16 Nov | Simple, and readable in the address bar |
+| Files are stored under a generated name in `places/<place id>/...` | Claude, 16 Nov | A phone's file name can contain anything, and can repeat. Only a short, plain ending is kept |
+| The pin rules run in `save()`, not only in forms | Claude, 16 Nov | Pins will be written by scripts and by the placement step, which never pass through a form |
+| "Not a number" and infinity are refused | Claude, 16 Nov | A failed placement run can produce them, and a viewer cannot draw them |
+| Three migrations, one per step | Claude, 16 Nov | Each can be read on its own |
+
+### How to change it
+
+- **Add a field:** add it in `rooms/models.py`, then `makemigrations` and `migrate`. Add it to the model's admin class if it should show in a list.
+- **Add a scan status:** add a line to `Scan.Status`. It needs a migration because the choices are recorded there.
+- **Reserve another address word** (if a page is ever added at `/places/<word>/`): add it to `RESERVED` in `rooms/slugs.py`.
+- **Change where files are stored:** the three `*_path` functions. Existing rows keep their old paths.
+
+### Known gaps
+
+- A file is removed as soon as its row is deleted, even if the surrounding database transaction is later rolled back. Nothing deletes inside a transaction today.
+- Empty folders are left under `media/places/` after their last file goes.
+- A place whose name has no Latin letters or digits gets the address word `place`.
+
+---
+
+## Piece 4: Places
+
+**Status, 17 Nov 2026:** applied from `prebuilt/django/chunk3-places` while the builder was away, at their request ("I am not able to give time right now ... want you to start working"). The calls below have not yet been read out to the builder, and the plan's walk-through for chunk 3 is still owed. Either may change this piece.
+
+### What it does
+
+Lets a logged-in person keep a list of places: create one, open it, rename it, delete it. A person sees only their own. This is the app's first complete loop from a form, through a view, into the database and back onto a page.
+
+| Address | Page | View |
+| --- | --- | --- |
+| `/` | Landing page; a logged-in person is sent on to `/places/` | `home` |
+| `/places/` | Your places | `place_list` |
+| `/places/new/` | New place | `place_create` |
+| `/places/<slug>/` | One place, with its "Room scans" and "Photos" sections | `place_detail` |
+| `/places/<slug>/edit/` | Rename | `place_edit` |
+| `/places/<slug>/delete/` | Asks first, then deletes | `place_delete` |
+
+### Where the code is
+
+| File | What it is |
+| --- | --- |
+| `rooms/access.py` | `get_own_place(user, slug)`: the owner check |
+| `rooms/forms.py` | `PlaceForm`: the one field `name` |
+| `rooms/views.py` | One function per page |
+| `rooms/urls.py` | The table above |
+| `rooms/models.py` | `Place.get_absolute_url()` |
+| `rooms/templates/rooms/` | `place_list.html`, `place_form.html` (new and rename), `place_detail.html`, `place_confirm_delete.html` |
+| `rooms/tests/test_places.py` | 20 tests |
+
+### How one request flows
+
+Creating a place called "Dorm Room 214":
+
+1. The browser sends `POST /places/new/` with `name` and the hidden security token.
+2. `config/urls.py` → `rooms/urls.py`. The line for `places/new/` is above the line for `places/<slug>/`, so "new" is not read as a place's address.
+3. `@login_required` on `place_create` checks the session. A logged-out visitor is sent to `/accounts/login/?next=/places/new/` and returns here after logging in.
+4. `PlaceForm(request.POST).is_valid()` checks the name: not blank, at most 80 characters.
+5. The view sets `form.instance.owner = request.user`. The owner is never read from the request, so nobody can create a place in another person's name.
+6. `form.save()` → `Place.save()` → `unique_slug()` makes `dorm-room-214` → the row is inserted.
+7. "Place created." is stored to show once, and the view redirects to `/places/dorm-room-214/`.
+8. `place_detail` → `get_own_place(request.user, "dorm-room-214")` → `place_detail.html`.
+
+### The owner check
+
+```python
+def get_own_place(user, slug):
+    return get_object_or_404(Place, owner=user, slug=slug)
+```
+
+Every view that needs a place calls this and nothing else. It asks the database for the slug **and** the owner together, so another person's place is not found at all. The answer is 404, the same as for an address that does not exist, never 403: a 403 would confirm that the address belongs to someone.
+
+### Decisions and why
+
+| Decision | Who, when | Why |
+| --- | --- | --- |
+| Each user sees only their own places | **Builder** (the approved design) | The product is private by default |
+| Another user's place answers 404, not 403 | Claude, 16 Nov | Nobody can learn which addresses are taken |
+| The check lives in one function in `rooms/access.py` | Claude, 16 Nov | One place to read, one place to get right; a view cannot forget part of it |
+| Deleting asks first, on a page that counts what will go | Claude, 16 Nov | It removes videos and photos for good |
+| Renaming does not change the address | Claude, 16 Nov | Old links keep working |
+| A logged-in person at `/` is sent to their places | Claude, 16 Nov | The landing page has nothing for them |
+| The owner is set in the view, and `owner` is not a form field | Claude, 16 Nov | A crafted request cannot choose the owner. A test proves it |
+
+### How to change it
+
+- **Add something a person types when creating a place:** add the field to `Place`, migrate, and add it to `fields` in `PlaceForm`. The pages draw it without further changes.
+- **Change who can open a place** (sharing, say): `get_own_place` is the only spot. Every page follows.
+- **Change an address:** `rooms/urls.py`. Templates and redirects use the names (`place_detail`), so they follow; tests that spell out addresses will need the same change.
+
+### Known gaps
+
+- No paging: a person with hundreds of places gets one long list.
+- A place cannot be moved to another user.
+
+---
+
+## Piece 5: Room video upload
+
+**Status, 17 Nov 2026:** applied from `prebuilt/django/chunk4-video` while the builder was away, at their request ("I am not able to give time right now ... want you to start working"). The calls below have not yet been read out to the builder, and the plan's walk-through for chunk 4 is still owed. Either may change this piece.
+
+### What it does
+
+Lets a person add a filmed video of a room to a place, see it listed with its filming date and status, and delete it. A place can hold several videos; the most recently filmed is listed first.
+
+**Nothing builds the 3D room yet.** An uploaded video stays at "Uploaded", and the page says so. Turning a video into a room is a separate piece, run by hand outside the app for now.
+
+| Address | Page | View |
+| --- | --- | --- |
+| `/places/<slug>/scans/new/` | Add a room video | `scan_create` |
+| `/scans/<number>/delete/` | Asks first, then deletes | `scan_delete` |
+
+### Where the code is
+
+| File | What it is |
+| --- | --- |
+| `rooms/validators.py` | `validate_video`: the three checks on the file |
+| `rooms/forms.py` | `ScanForm`: the video and the filming date |
+| `rooms/access.py` | `get_own_scan(user, pk)`: the owner check for a scan |
+| `rooms/views.py` | `scan_create`, `scan_delete`; `place_detail` lists the scans |
+| `rooms/templates/rooms/` | `scan_form.html`, `scan_confirm_delete.html`, and the "Room scans" section of `place_detail.html` |
+| `config/settings.py` | `MAX_VIDEO_BYTES` |
+| `rooms/tests/test_scans.py` | 24 tests |
+
+### How one request flows
+
+Uploading a room video to "Dorm":
+
+1. The browser sends `POST /places/dorm/scans/new/` as a multipart request: the form has `enctype="multipart/form-data"`, which is what lets it carry a file. As a large file arrives, Django writes it to a temporary file on disk, not into memory.
+2. `rooms/urls.py` → `views.scan_create` → `@login_required` → `get_own_place(request.user, "dorm")`. Someone else's place is a 404 before the file is looked at.
+3. `ScanForm(request.POST, request.FILES).is_valid()` runs `validate_video` on the file and checks the date is not in the future.
+4. The view sets `form.instance.place` from the address, then `form.save()`.
+5. `scan_video_path` (in `rooms/models.py`) chooses the stored name, `places/<place id>/scans/<32 random characters>.mp4`, and the file moves into `media/`.
+6. The row is inserted with status `uploaded`. "Room video added." is stored, and the view redirects to the place's page, which now lists the scan.
+
+### The three checks on a video
+
+In this order, cheapest first (`rooms/validators.py`):
+
+| Check | Refused with |
+| --- | --- |
+| The file name ends in `.mp4` or `.mov`, any case | "Upload an MP4 or MOV video." |
+| The file is at most `MAX_VIDEO_BYTES` (500 MB) | "This video is too large. The limit is 500 MB." |
+| Bytes 4 to 8 of the file are `ftyp`, as in every MP4 and modern MOV | "This file is not a video the app can read." |
+
+An empty file is refused by Django's own file field before these run.
+
+### Decisions and why
+
+| Decision | Who, when | Why |
+| --- | --- | --- |
+| The video is kept after upload | **Builder** (approved §6) | It is the source the room is built from, and can be rebuilt from |
+| MP4 and MOV only | Claude, 16 Nov | They are what Android and iPhone cameras write |
+| Checked by name and by first bytes | Claude, 16 Nov | The name is whatever the sender says. The first bytes catch a photo or a document renamed by mistake. It is a sanity check, not proof the video plays |
+| 500 MB limit | Claude, 16 Nov | About three minutes at 1080p (roughly 130 MB a minute on the builder's phone); one to two minutes is enough for a room |
+| The filming date starts as today and cannot be in the future | Claude, 16 Nov | Most videos are uploaded the day they are filmed; an old one can be back-dated |
+| A place can hold several scans | Claude, 16 Nov | A room can be filmed again later; the model already allows it |
+| `ScanForm` declares its own file field | Claude, 16 Nov | Django's generated one refuses a file whose original name is over 100 characters, and the original name is never stored |
+| A scan is found by its number, a place by its word | Claude, 16 Nov | A scan has no name to make a word from |
+
+### How to change it
+
+- **Change the size limit:** `MAX_VIDEO_BYTES` in `config/settings.py`. The message updates itself.
+- **Accept another video type:** add its ending to `VIDEO_ENDINGS` in `rooms/validators.py` and its type to the `accept` attribute in `ScanForm`. Check what its first bytes look like before relying on the third check.
+- **Start a build when a video arrives:** the line after `form.save()` in `scan_create` is where that hand-off would go.
+
+### Known gaps
+
+- No progress bar. A large upload shows only the browser's own loading indicator.
+- If the upload is interrupted, the person starts again.
+- A double tap on the upload button can send the video twice.
+- The checks do not prove the file is a playable video.
+
+---
+
+## Piece 6: Building the room (Colab notebook)
+
+**Status, 17 Nov 2026:** built and rehearsed with a stand-in model; **never run on a GPU or a real video.** Its full account is `ai/README.md`; this section is the summary.
+
+### What it does
+
+Turns one room video into a 3D room. The video and a zip of the code go in a Google Drive folder; `ai/build_room_colab.ipynb` runs in Colab on a free GPU and writes a room folder back to Drive. Django does not call it: for the first draft the room is built by hand, outside the app.
+
+### How one run flows
+
+1. `roompipe.frames.extract_frames`: the video is cut into 60 stretches; the sharpest frame of each is kept.
+2. `roompipe.model.run_mapanything`: one MapAnything pass over the frames (Apache weights, revision `00f9c24`). It returns a camera for every frame and a 3D point for every pixel. The least certain fifth of the points is dropped.
+3. `roomgeom.level.level_room`: find "up" from the cameras, put the floor at z = 0, thin to one point per 2 cm, keep about 20 anchor frames.
+4. `roompipe.build.build_room`: write the room folder: points (PLY and `bin`), anchors, every frame with its camera and per-pixel points, `room.json`.
+5. Optional, `roompipe.place.place_photos`: each batch of photos goes through the model twice with different anchors; a photo is pinned only if the two answers agree.
+6. `roompipe.session.RunLog`: `run.json` records the GPU, the pinned versions, seconds and peak GPU memory per step, and any failure. A failed step stops the later ones, and the record is still saved.
+
+If the GPU runs out of memory, the build is retried with 40, then 30 frames (`session.build_with_fallback`).
+
+### Decisions and why
+
+| Decision | Who, when | Why |
+| --- | --- | --- |
+| Run the model in Colab for the first draft | **Builder, 16 Nov** (design approach A) | No GPU on the laptop; wiring Django to a GPU host is after the draft |
+| Apache weights only | **Builder** (project rule) | Commercial-friendly licence |
+| Pin the weights revision and the MapAnything commit | Claude, 17 Nov | The weights were republished in January 2026; the draft's evidence has to be repeatable |
+| Save every frame, its camera and per-pixel points, not only the thinned points | Claude, 17 Nov | Another way of placing photos can then be tried without running the model again |
+| Files reach Colab through Google Drive | Claude, 17 Nov | A phone can upload a large video straight to Drive, and results survive a Colab disconnect |
+| The code reaches Colab as a zip | Claude, 17 Nov | The repository is private, so Colab cannot fetch it |
+| Photos are copied with no EXIF | Claude, 17 Nov | Their GPS position never leaves the copy step; the date and focal length are read first |
+| A stand-in model can run the whole notebook | Claude, 17 Nov | The notebook could be tested end to end without a GPU. Everything it makes is labelled a made-up room |
+
+### Known gaps
+
+- The real model call has never run. Whether 60 frames fit a T4 and how long a room takes are unknown.
+- Nothing corrects the model's scale. If its "metric" output is 5% off, so is the room.
+- Portrait photos run with landscape frames are cropped by the model's image loader.
+
+---
+
+## Piece 7: Photos
+
+**Status, 18 Nov 2026:** applied from `prebuilt/django/chunk5-parts` and `prebuilt/django/chunk5-rest/D2a-D3a` (step C1 of `docs/plans/2026-11-18-first-draft-finish.md`). D2 and D3 are the builder's answers of 17 Nov. The plan's other calls for chunk 5 (listed under "Decisions and why") have not been read out to the builder yet, and the walk-through is folded into the combined walk-through (step B6).
+
+### What it does
+
+Lets a person add photos to a place, see them in a grid, give each a caption and a date, and delete them. The app calls a photo with its caption and date a **memory**.
+
+- Many photos are picked in one go. Captions are added afterwards, photo by photo.
+- A photo file can only be fetched by its owner, logged in.
+
+| Address | Page | View |
+| --- | --- | --- |
+| `/places/<slug>/memories/new/` | Add photos | `memory_create` |
+| `/memories/<number>/edit/` | One photo, large, with its caption and date | `memory_edit` |
+| `/memories/<number>/delete/` | Asks first, then deletes | `memory_delete` |
+| `/memories/<number>/photo/` | The photo file itself | `memory_photo` |
+
+### Where the code is
+
+| File | What it is |
+| --- | --- |
+| `rooms/photos.py` | `photo_taken_on`: reads the capture date from inside a photo |
+| `rooms/validators.py` | `validate_photo`: size, and "is really a JPEG, PNG or WebP" (`PHOTO_FORMATS`) |
+| `rooms/forms.py` | `MultipleFileInput`, `MultipleImageField`, `MemoryUploadForm` (adding) and `MemoryForm` (caption and date) |
+| `rooms/access.py` | `get_own_memory(user, pk)` |
+| `rooms/views.py` | `memory_create`, `memory_photo`, `memory_edit`, `memory_delete` |
+| `rooms/models.py` | `Memory.photo_address()`: the address pages use to show a photo |
+| `rooms/templates/rooms/` | `memory_upload.html`, `memory_form.html`, `memory_confirm_delete.html`, and the "Photos" section of `place_detail.html` |
+| `config/settings.py` | `MAX_PHOTO_BYTES` (20 MB), `MAX_PHOTOS_PER_UPLOAD` (50) |
+| `rooms/tests/` | `test_memories.py` (20 tests), `test_memory_pages.py` (21), `test_memory_upload.py` (23), `test_memory_files.py` (8) |
+
+### How one request flows
+
+Uploading three photos to "Dorm":
+
+1. `POST /places/dorm/memories/new/`, a multipart request carrying three files under the one name `photos`.
+2. `views.memory_create` → `@login_required` → `get_own_place`.
+3. `MemoryUploadForm.is_valid()` → `MultipleImageField.clean`: at most 50 files; each file must be non-empty and pass `validate_photo`. Every failure is collected as "file name: reason". One bad file refuses the whole upload.
+4. Inside one database transaction, for each file: `photo_taken_on(file)` reads its date, and a `Memory` row is created. `memory_photo_path` picks the stored name (a random one, under `media/places/<place id>/memories/`).
+5. "3 photos added." and a redirect to the place's page.
+
+Then the place's page lists the photos, and the browser asks for each image. Each `<img>` points at `/memories/<number>/photo/`. `views.memory_photo` → `@login_required` → `get_own_memory` (404 for anyone else) → the file is sent with `Cache-Control: private, max-age=3600`. A row whose file has gone from disk gives 404.
+
+### Decisions and why
+
+| Decision | Who, when | Why |
+| --- | --- | --- |
+| D2 = a: many photos at once, captions afterwards | **Builder, 17 Nov** (Claude's recommendation) | It is the web version of picking from the gallery: people have dozens of photos of a room. One per form would be slow for thirty |
+| D3 = a: a photo file only through a view that checks the owner | **Builder, 17 Nov** (Claude's recommendation) | Private by default. Open addresses would let anyone with a link see the photo, logged in or not. At deployment this becomes time-limited bucket links |
+| JPEG, PNG and WebP only, 20 MB each | Claude, 16 Nov | They are what browsers show and Pillow reads. HEIC gets a plain message |
+| A photo is judged by its content, not its name | Claude, 16 Nov | The name is whatever the sender says |
+| At most 50 photos per upload; one bad file refuses the batch | Claude, 16 Nov | Simple to explain. Saving the good ones and skipping the bad is friendlier and is a later improvement |
+| The date is read from inside the photo when it has one | Claude, 16 Nov | Saves typing; it can be edited afterwards |
+| Each file is checked by `validate_photo`, not also by Django's `ImageField` | Claude, 16 Nov | Django's check would give a HEIC photo its generic "not a valid image" message before ours could say "HEIC is not supported yet" |
+| Pages get a photo's address from `Memory.photo_address()` | Claude, 16 Nov | One line to change when photos move to a storage bucket |
+| A photo's own page is its edit page | Claude, 16 Nov | Tapping a photo opens it large with its caption and date boxes; no separate view-only page |
+| Location data inside photos is left alone for now | Claude, 16 Nov | It belongs with the security work before deployment |
+| The grid shows full-size photos scaled down | Claude, 16 Nov | No thumbnail code yet; fine for tens of photos |
+
+### Checked
+
+- 195 tests pass (18 Nov), 72 of them for this piece.
+- A real server (a scratch copy with its own database, 18 Nov): 14 of 14 HTTP checks passed. Three JPEGs uploaded in one request ("3 photos added.", "Photos (3)", the dated one shown as 9 May 2026); the owner gets the file as `image/jpeg` with `private, max-age=3600`; a logged-out visitor is sent to login; a second user gets 404 on the file and on the photo's page; `/media/` and a stored file's real `/media/...` path both give 404. The photos were small images made by Pillow, not phone photos, and nothing was looked at in a browser.
+
+### How to change it
+
+- **Change a limit:** `MAX_PHOTO_BYTES` and `MAX_PHOTOS_PER_UPLOAD` in `config/settings.py`. Messages and help text follow.
+- **Accept another photo type:** `PHOTO_FORMATS` in `rooms/validators.py`, and the `accept` attribute on the upload field in `rooms/forms.py`. HEIC needs an extra library.
+- **Change where photos are fetched from:** `Memory.photo_address()`.
+- **Add a field to a memory:** the model, a migration, and `fields` in `MemoryForm`.
+
+### Known gaps
+
+- No thumbnails.
+- Location data stays inside uploaded photos.
+- No HEIC: an iPhone set to "High Efficiency" gets a message, not an upload.
+- A double tap on the upload button can upload twice.
+- If saving fails part-way through a batch, the rows are rolled back but files already written are left on disk.
+- Every image request runs Python, which is fine at this size and slow at a large one.
+
+---
+
+## Piece 8: Bringing a built room into the app (`import_room`)
+
+**Status, 18 Nov 2026:** built and tested (step C6 of the run sheet). Run on the made-up demo room from `python -m roompipe demo`; **not yet run on a real room.** Built without the builder present; the calls below are listed for them.
+
+### What it does
+
+Takes the room folder (or zip) that the Colab notebook made, checks it, attaches its points to a scan, and marks the scan ready, so the 3D viewer page can show it. For the first draft this is the only way a room reaches the app: the builder runs it by hand after downloading the zip.
+
+```powershell
+.venv\Scripts\python.exe manage.py import_room <scan number> <room folder or .zip> [--made-up]
+```
+
+The scan number is the "Id" column in the admin site's Scans list (`/admin/rooms/scan/`), added for this command.
+
+### Where the code is
+
+| File | What it is |
+| --- | --- |
+| `rooms/management/commands/import_room.py` | The command: find the scan, check the room, store the file, save the facts, mark it ready |
+| `rooms/roomfolder.py` | Finds the room in a folder or zip; reads `room.json` and `run.json`; checks `points.ply` byte by byte against the layout the AI code writes; decides "made up" and "allowed model". Standard library only |
+| `rooms/models.py` | `Scan.room_info` (new, migration `0004_scan_room_info`); the points file now ends `-points.ply` |
+| `rooms/admin.py` | The Scans list shows each scan's number ("Id") |
+| `rooms/tests/test_import_room.py` | 22 tests (21 for the command, 1 for the admin column) |
+
+### How one import flows
+
+1. `import_room 4 Downloads\room-2026-11-18.zip` → `Scan.objects.get(pk=4)`, or "No scan number 4".
+2. `open_room`: a folder, a folder holding one room folder, or a zip whose room is at the top or inside one folder. Nothing is unpacked: only `room.json`, `run.json` and `points.ply` are read, by name.
+3. `check_room`: `run.json` if present; then `room.json` must exist (if not, the run failed, and `run.json`'s "stopped because" is quoted), be version 1, and agree with `points.ply` on the point count. The PLY's header must be exactly Memory Room's layout and its length exactly header + 15 bytes per point.
+4. Which model made it: the stand-in model's rooms need `--made-up`; a real room must name `facebook/map-anything-apache` (the project's licence rule); a room that names no model is refused.
+5. `points.ply` is copied into `media/places/<id>/scans/<random>-points.ply`. `room_info` gets the point count, the box in metres, up consistency, frames used, model, weights revision, precision, GPU, run name, `made_up`, and when it was imported. Status becomes "ready". An older points file on the same scan is deleted.
+
+### Decisions and why
+
+| Decision | Who, when | Why |
+| --- | --- | --- |
+| A built room reaches the app through a management command run on the downloaded folder | **Builder, 17 Nov** (Claude's recommendation) | The AI runs in Colab for the draft; a command is the smallest honest bridge. By 8 Dec a view starts the GPU job and its result goes through the same checks |
+| The viewer reads PLY, so the stored file ends `.ply` | **Builder, 17 Nov** | A standard format that 3D tools open too |
+| The room's facts go in one JSON field, `Scan.room_info` | Claude, 18 Nov | Design §6 said `n_points` and `room_box` would arrive with the viewer; one field holds those and the run's facts (model, GPU, precision) without a migration for each. Searching by them is not needed |
+| A stand-in room is refused unless `--made-up` is given, and is then labelled made up everywhere | Claude, 18 Nov (run sheet) | A fake room must never be shown as a result; the class forbids fabricated outcomes |
+| `--made-up` on a real room is refused | Claude, 18 Nov | So the label is never wrong in either direction |
+| A room from any weights other than `facebook/map-anything-apache` is refused | Claude, 18 Nov | The project's licence rule, checked where the result enters the app as well as where the model loads |
+| The PLY is checked byte by byte; the count must match `room.json` | Claude, 18 Nov | A file the viewer would misread fails here, with a reason, instead of showing a broken room |
+
+### Checked
+
+- 21 tests (the whole suite: 216, 18 Nov). A good room from a folder, a zip, a zip with one folder inside, a folder holding one room folder; importing again replaces the file; and each refusal: unknown scan, nothing at the path, a failed run (its reason quoted), another version, no PLY, not a PLY, another layout, cut short, counts that disagree, no model named, the non-commercial weights, a made-up room without the flag (seen in `run.json` or in `room.json`), and the flag on a real room.
+- On a scratch copy of the app, the demo room from `python -m roompipe demo` (written by the AI code's own PLY writer), zipped the way the notebook zips: refused without `--made-up`; with it, "Scan 1 is ready: 98,329 points, in a box 4.17 x 3.24 m across and 2.50 m high"; the stored file is byte-for-byte the room's `points.ply`; importing the folder again left one points file on disk.
+
+### Known gaps
+
+- Run by hand; nothing in the app starts it.
+- Photo placements in the room (`placements.json`) are not imported: the command cannot tell which `Memory` each photo is. That waits for placement inside the app.
+- The box is the room's extent along the room's own axes; until walls are lined up with the axes it is larger than the room.
+
+---
+
+## Piece 9: The 3D room page
+
+**Status, 18 Nov 2026:** built and tested (step C7 of the run sheet); seen in a real browser with the made-up demo room. **Not yet shown a real room, and not opened on a phone.** Built without the builder present; the calls below are listed for them.
+
+### What it does
+
+Shows the room built from one scan as coloured dots you can turn and zoom, with each placed photo as a dot on a stalk (orange: placed by the AI; blue: by hand). Tapping a dot shows that photo below the room, with a link to its page. Two views: standing inside, and from above with the ceiling cut away. A room made by the stand-in model carries a "MADE-UP ROOM" notice.
+
+| Address | What | View |
+| --- | --- | --- |
+| `/scans/<number>/room/` | The page | `scan_room` |
+| `/scans/<number>/points.ply` | The room's points file | `scan_points` |
+
+On a place's page, each ready scan has a "View the room in 3D" link. One page per scan, so each version of a place (core feature 3) will have its own.
+
+### Where the code is
+
+| File | What it is |
+| --- | --- |
+| `rooms/views.py` | `scan_room`, `scan_points`, and `_get_own_built_scan` (owner check, then "is it built?") |
+| `rooms/templates/rooms/scan_room.html` | The page: import map, notice, the room, two view buttons, the chosen photo, and a short script that loads the points and starts the viewer |
+| `static/viewer/roomviewer.js`, `loaders.js` | The viewer and the PLY reader, copied unchanged from `prebuilt/viewer/` |
+| `static/viewer/vendor/` | three.js 0.170.0 and its `OrbitControls`, unchanged, with their MIT licence |
+| `templates/base.html` | A new `{% block head %}` for the page's import map |
+| `rooms/templates/rooms/place_detail.html` | The "View the room in 3D" link |
+| `static/css/site.css` | One block at the end, and a `--warn-bg` colour for the notice |
+| `rooms/tests/test_scan_room.py` | 12 tests |
+
+### How one request flows
+
+1. `GET /scans/4/room/` → `views.scan_room` → `@login_required` → `get_own_scan` (404 for anyone else) → 404 too if the scan is not "ready" or has no points file.
+2. The view lists the scan's pins (photo caption, x, y, z, who placed it, the photo's owner-checked address, its page) and hands them, the box from `room_info` and the points file's address to the template, which writes them out with `json_script`. A caption is data, never code.
+3. The browser loads three.js through the import map, then fetches `/scans/4/points.ply` → `views.scan_points` → the same two checks → the file, `application/octet-stream`, `Cache-Control: private, max-age=3600`.
+4. `loaders.js` reads the PLY (only Memory Room's layout); `roomviewer.js` draws it. Tapping a dot fetches its photo through `/memories/<number>/photo/`, which checks the owner again.
+
+### Decisions and why
+
+| Decision | Who, when | Why |
+| --- | --- | --- |
+| Coloured points in a three.js page inside the app | **Builder, 16 Nov** (approved design §7) | The design's first-draft viewer |
+| The page reads PLY | **Builder, 17 Nov** | — |
+| The page lives at `/scans/<number>/room/`, one per scan | Claude, 17 Nov (run sheet) | A room belongs to a scan, so versions each get a page. `prebuilt/viewer/README.md` had sketched `/places/<slug>/room/` |
+| The points file goes through an owner check, like photos | Claude, 17 Nov (run sheet; follows D3 a) | `media/` is not public; a room shows the inside of someone's home |
+| An unbuilt scan's page is a 404, not a "not ready yet" page | Claude, 18 Nov | The link only appears once a scan is ready; a friendlier page can come with the GPU job |
+| three.js is a copy in `static/`, not from a CDN | Claude, 16 Nov (viewer kit) | Works with no internet, for the class demo |
+| Dots 3 cm wide; two views; colours drawn as stored | Claude, 16 Nov (viewer kit) | See `prebuilt/viewer/README.md`, "Calls made here" |
+| No hand placement on this page yet | Claude, 18 Nov | Saving a hand-placed pin needs a POST view and a choice of photo; the run sheet counts it as an extra. The viewer already supports it (`startPlacing`) |
+| A tapped dot shows the photo, its caption, who placed it, and a link | Claude, 18 Nov | The smallest useful answer to "what was taken here?" |
+
+### Checked
+
+- 12 tests (the whole suite: 228, 18 Nov): login needed for both addresses; another user gets 404 on both; an unbuilt scan gives 404; the page carries the viewer, the points address, the box and the pins; pins of another scan are left out; a caption with `</script>` cannot break out of the data; the made-up notice shows only for a made-up room; the file comes back as `application/octet-stream`, private, byte for byte; a missing file gives 404; the place page links only ready scans.
+- In Chromium (Playwright), on a scratch copy of the app with the demo room imported (`--made-up`) and three photos pinned by hand from the demo's `placements.json`: 98,329 points and 3 pins drawn; the notice shown; tapping a pin showed its photo (loaded through the owner check), caption and link; "Look from above" works; at 390 px wide nothing scrolls sideways. The only console error was `/favicon.ico` (404), which every page of the site has.
+
+### Known gaps
+
+- Not yet shown a real room, which will be noisier than the demo. Not tried on a phone (touch, and speed with real point counts).
+- No hand placement, no pin list, no way to move a pin yet (the JSON API, planned for 29 Nov).
+- The whole points file is downloaded each visit (cached for an hour); a large room may be slow on a phone connection.
+- The site has no favicon, so every page logs one 404.
 
 ---
 

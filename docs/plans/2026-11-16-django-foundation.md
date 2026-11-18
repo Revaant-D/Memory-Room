@@ -17,10 +17,10 @@ This plan is cut into six chunks. Each chunk is one sitting with one Claude sess
 | Chunk | What exists when it is done | Rough time | Status |
 | --- | --- | --- | --- |
 | 1. Skeleton and accounts | The project runs; sign-up, login, logout work | 60–75 min | Built, recorded and committed (`4ed4bda`) 16 Nov. Still to do: the builder's walk-through |
-| 2. The four models | Place, Scan, Memory, Pin with their rules, visible in the admin | 60 min | ☐ |
-| 3. Places pages | Create, list, open, rename, delete a place; other users get a 404 | 60 min | ☐ |
-| 4. Room video upload | Upload and delete a room video on a place | 45 min | ☐ |
-| 5. Photos | Upload many photos, caption them, delete them; photos are private | 75 min | ☐ |
+| 2. The four models | Place, Scan, Memory, Pin with their rules, visible in the admin | 60 min | Applied from `prebuilt/` and recorded 17 Nov; 78 tests at that point. Not committed. Still to do: read out the calls, the walk-through |
+| 3. Places pages | Create, list, open, rename, delete a place; other users get a 404 | 60 min | Applied from `prebuilt/` and recorded 17 Nov; 99 tests at that point. Not committed. Still to do: read out the calls, the walk-through |
+| 4. Room video upload | Upload and delete a room video on a place | 45 min | Applied from `prebuilt/` and recorded 17 Nov; 123 tests. Not committed. Still to do: read out the calls, the walk-through (it uploads the real room video) |
+| 5. Photos | Upload many photos, caption them, delete them; photos are private | 75 min | Applied from `prebuilt/` (D2 a, D3 a) and recorded 18 Nov; 195 tests. Not committed. Still to do: read out the calls, the walk-through (combined walk-through, run sheet step B6) |
 | 6. Runs from a fresh clone | README; a clean copy installs, passes its tests and starts | 30 min | ☐ |
 
 Times are Claude's estimates and include the walk-through.
@@ -797,6 +797,17 @@ Room scans                                  [Add a room video]
 
 Add "Room video upload" to the system map: the traced request, the three checks and their numbers, where files live and how they are named, and the honest status note (nothing builds the room yet; the Colab run is a separate piece).
 
+## As built (chunks 2, 3 and 4, 17 Nov 2026)
+
+The code for all three chunks came from `prebuilt/django/chunk2-models`, `chunk3-places` and `chunk4-video`, applied one after another with `kit.py apply --write`. Nothing was written by hand.
+
+- **Why without the builder.** On 17 Nov the builder said they could not give time to the docs yet and asked Claude to start working. The Decide step's calls (this plan's, plus each kit README's "Calls made here") were therefore not read out first, and the three walk-throughs were not done. Both are owed. Nothing is committed, so any call the builder overrules is a plain edit.
+- **Before.** `kit.py verify --upto chunk4-video` on a fresh copy: check, migrations and tests all `ok` (123 tests). The project's own suite: 50 pass.
+- **After each apply** (`migrate`, then `test`): 78, then 99, then 123 tests, all passing, as the kits' READMEs predicted. `makemigrations --check` reports no changes. Migrations `0001_place`, `0002_scan_memory` and `0003_pin` were applied to the builder's `db.sqlite3`.
+- **Counts against this plan.** 99 after chunk 3 (the plan says 96) and 123 after chunk 4 (the plan says 117): the six extra tests are listed in the two kits' READMEs.
+- **Checked against a running server.** A throwaway copy of the app with its own database ran real HTTP requests: 20 of 20 checks passed (list in `docs/system-map.md`, "Running it"). The video was a 64-byte stand-in. The real room video and a browser look are the walk-throughs' job.
+- **Recorded.** Pieces 3, 4 and 5 in `docs/system-map.md` are the kits' drafts, with a status line added to each. The kits' folders under `prebuilt/` are kept until the builder has walked through and committed.
+
 ---
 
 # Chunk 5: Photos
@@ -979,6 +990,14 @@ test_edit_delete_need_login
 ## Record (chunk 5)
 
 Add "Photos" to the system map: the traced request, D2 and D3 as the builder's decisions with their reasons, the limits and where each is set, how the date is read, and the known limits (no thumbnails, location data kept, all-or-nothing batches, no HEIC).
+
+## As built (chunk 5, 18 Nov 2026)
+
+- **Decide.** D2 = a and D3 = a, the builder's answers on 17 Nov, both the recommended options. The calls above and the kit README's "Calls made here" have not been read out yet; they are listed for the builder at the end of the 18 Nov session.
+- **Build.** The code came from `prebuilt/django/chunk5-parts` then `prebuilt/django/chunk5-rest/D2a-D3a`, applied with `kit.py apply --write`. Nothing was written by hand. Before applying, `kit.py verify --choice chunk5-D2a-D3a` on a fresh copy: all four lines `ok`, 195 tests.
+- **After.** `makemigrations --check` reports no changes; no migration was needed. 195 tests pass in the project (the plan says 156 for its own list; the kit adds tests the plan did not name, listed in `prebuilt/django/chunk5-rest/README.md`, and the tests sit in four files by topic instead of one `test_memories.py`).
+- **Real check.** A scratch copy of the app with its own database, run with `runserver`: 14 of 14 HTTP checks passed, plus a 404 for a stored photo's real `/media/...` path. Details in `docs/system-map.md`, piece 7. The photos were small Pillow-made JPEGs; real phone photos and a browser look are for the walk-through.
+- **Recorded** as piece 7 in `docs/system-map.md` (piece 6 is the Colab notebook).
 
 ---
 
