@@ -18,6 +18,9 @@ from roomgeom.level import (
     estimate_up,
     level_room,
     pick_anchors,
+    points_to_room,
+    poses_to_room,
+    relevel,
     room_rotation,
     voxel_downsample,
 )
@@ -177,7 +180,9 @@ class LevelTests(unittest.TestCase):
         heights = out["room_poses"][:, 2, 3]
         self.assertLess(np.abs(heights - CAMERA_HEIGHT).max(), 0.006)
         forward_z = out["room_poses"][:, 2, 2]  # z part of each camera's forward direction
-        self.assertLess(np.abs(forward_z).max(), 1e-9)
+        # To 0.06 degrees, not exactly: up now comes from the fitted floor, and
+        # the wall points touching the floor move that fit by a hair (18 Nov).
+        self.assertLess(np.abs(forward_z).max(), 1e-3)
 
     def test_shapes_are_not_stretched(self):
         out = level_room(self.raw_points, self.raw_poses)
@@ -240,6 +245,97 @@ class LevelTests(unittest.TestCase):
         no_floor = self.raw_points[self.points[:, 2] > 1.2]
         with self.assertRaises(Refilm):
             level_room(no_floor, self.raw_poses)
+
+    def floor_in_room_frame(self, out, raw_points):
+        room = raw_points @ out["R"].T
+        room[:, 2] -= out["floor_h"]
+        return room
+
+    def test_a_bed_top_fuller_than_the_floor_is_not_taken_for_the_floor(self):
+        # The first real room (18 Nov 2026): a flat bed top 0.71 m up held more
+        # points in one 1 cm slice than the floor did, and was taken for the floor.
+        # 0.705 puts the bed in the middle of a slice, so it is not split in two.
+        on_floor = np.abs(self.points[:, 2]) < 1e-9
+        under_bed = on_floor & (self.points[:, 0] >= 3.0) & (self.points[:, 1] >= 1.0)
+        gx, gy = np.meshgrid(np.arange(3.0, 4.0, 0.02), np.arange(1.0, 3.0, 0.02))
+        bed = np.column_stack([gx.ravel(), gy.ravel(), np.full(gx.size, 0.705)])
+        points = np.vstack([self.points[~under_bed], bed])
+        floor = np.concatenate([(on_floor & ~under_bed)[~under_bed], np.zeros(len(bed), bool)])
+        self.assertGreater(len(bed), floor.sum())  # the premise: the bed top is the fuller layer
+        raw_points, _ = move(points, self.poses, self.Q, self.shift)
+
+        out = level_room(raw_points, self.raw_poses)
+
+        room = self.floor_in_room_frame(out, raw_points)
+        self.assertLess(np.abs(room[floor, 2]).max(), 0.006)
+        np.testing.assert_allclose(room[-len(bed):, 2], 0.705, atol=0.006)
+
+    def leaning_walk(self, pitch_deg=10.0, n=60):
+        """A phone tilted down, walked along the room and facing mostly one way (+x)."""
+        poses = []
+        for i, turn in enumerate(np.radians(np.linspace(-40, 40, n))):
+            pitch = np.radians(pitch_deg)
+            forward = [np.cos(pitch) * np.cos(turn), np.cos(pitch) * np.sin(turn), -np.sin(pitch)]
+            poses.append(camera([1.0 + 2.0 * i / n, 1.5, CAMERA_HEIGHT], forward))
+        return np.stack(poses)
+
+    def test_the_room_is_levelled_by_its_floor_when_the_phone_leans(self):
+        # Averaging the phone's "down" leans toward the way it faced most. The
+        # floor itself says which way is up.
+        _, raw_poses = move(self.points, self.leaning_walk(), self.Q, self.shift)
+        camera_up, consistency = estimate_up(raw_poses)
+        lean = np.degrees(np.arccos(camera_up @ (self.Q @ [0, 0, 1.0])))
+        self.assertGreater(lean, 5.0)  # the premise: the phone's up is well off
+        self.assertGreater(consistency, 0.8)  # and the agreement check does not catch it
+
+        out = level_room(self.raw_points, raw_poses)
+
+        room = self.floor_in_room_frame(out, self.raw_points)
+        self.assertLess(np.abs(room[: self.n_floor, 2]).max(), 0.01)
+        self.assertEqual(out["up_from"], "floor")
+        self.assertAlmostEqual(out["floor_tilt_deg"], lean, delta=0.3)
+
+    def test_a_steep_surface_is_never_taken_for_the_floor(self):
+        # The lowest layer is a ramp at 30 degrees, with no floor at all. Up may
+        # move from the phone's answer by at most 15 degrees, so the ramp
+        # (or a wall) can never become the floor.
+        gx, gy = np.meshgrid(np.arange(0, 1.6, 0.02), np.arange(0, 3.0, 0.02))
+        ramp = np.column_stack([gx.ravel(), gy.ravel(), gx.ravel() * np.tan(np.radians(30))])
+        walls = self.points[np.abs(self.points[:, 2]) > 1e-9]
+        raw_points, _ = move(np.vstack([ramp, walls]), self.poses, self.Q, self.shift)
+
+        out = level_room(raw_points, self.raw_poses)
+
+        camera_up, _ = estimate_up(self.raw_poses)
+        used_up = out["R"].T @ [0, 0, 1.0]
+        self.assertLess(np.degrees(np.arccos(used_up @ camera_up)), 15.0 + 1e-6)
+
+    def test_relevel_undoes_a_tip_and_a_drop_and_keeps_the_heading(self):
+        # A room already in a room frame but levelled wrongly, as the first real
+        # room was: tipped 2 degrees and dropped 0.7 m. relevel gives the move
+        # back, in the form points_to_room takes.
+        axis = np.array([1.0, 0.5, 0.0]) / np.linalg.norm([1.0, 0.5, 0.0])
+        a = np.radians(2.0)
+        K = np.array([[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]])
+        tip = np.eye(3) + np.sin(a) * K + (1 - np.cos(a)) * K @ K
+        wrong_points = (self.points - [0, 0, 0.7]) @ tip.T
+        wrong_poses = self.poses.copy()
+        wrong_poses[:, :3, :3] = tip @ self.poses[:, :3, :3]
+        wrong_poses[:, :3, 3] = (self.poses[:, :3, 3] - [0, 0, 0.7]) @ tip.T
+
+        fix = relevel(wrong_points, wrong_poses)
+
+        fixed = points_to_room(wrong_points, fix["R"], fix["floor_h"])
+        np.testing.assert_allclose(fixed, self.points, atol=0.005)  # level, at z = 0, same heading
+        fixed_poses = poses_to_room(wrong_poses, fix["R"], fix["floor_h"])
+        np.testing.assert_allclose(fixed_poses, self.poses, atol=0.005)
+        self.assertEqual(fix["up_from"], "floor")
+        self.assertAlmostEqual(fix["floor_tilt_deg"], 2.0, delta=0.05)
+        self.assertAlmostEqual(fix["floor_h"], -0.7, delta=0.005)
+
+    def test_relevel_leaves_a_level_room_alone(self):
+        fix = relevel(self.points, self.poses)
+        np.testing.assert_allclose(points_to_room(self.points, fix["R"], fix["floor_h"]), self.points, atol=0.002)
 
 
 class PlaceTests(unittest.TestCase):

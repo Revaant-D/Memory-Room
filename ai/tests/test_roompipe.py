@@ -135,8 +135,14 @@ class BuildTests(PipeTestCase):
         for anchor in room["anchors"]:
             pose = np.array(anchor["pose"])
             self.assertAlmostEqual(pose[2, 3], 1.5, delta=0.01)  # camera height above the floor
-            self.assertAlmostEqual(pose[2, 2], 0.0, delta=1e-6)  # looking level
+            # Looking level, to 0.06 degrees: up comes from the fitted floor (18 Nov).
+            self.assertAlmostEqual(pose[2, 2], 0.0, delta=1e-3)
             np.testing.assert_allclose(pose[:3, :3] @ pose[:3, :3].T, np.eye(3), atol=1e-9)
+
+    def test_room_json_says_where_up_came_from(self):
+        room = self.build(self.model())
+        self.assertEqual(room["up_from"], "floor")
+        self.assertLess(room["floor_tilt_deg"], 1.0)
 
     def test_one_format_only(self):
         room = self.build(self.model(), formats=("ply",))

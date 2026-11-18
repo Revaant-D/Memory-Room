@@ -440,7 +440,7 @@ An empty file is refused by Django's own file field before these run.
 
 ## Piece 6: Building the room (Colab notebook)
 
-**Status, 17 Nov 2026:** built and rehearsed with a stand-in model; **never run on a GPU or a real video.** Its full account is `ai/README.md`; this section is the summary.
+**Status, 18 Nov 2026:** built and rehearsed with a stand-in model; **first real run on 18 Nov** (`room-20261118-1342`), which found a levelling bug that was fixed the same day (decision below). Its full account is `ai/README.md`; this section is the summary.
 
 ### What it does
 
@@ -450,7 +450,7 @@ Turns one room video into a 3D room. The video and a zip of the code go in a Goo
 
 1. `roompipe.frames.extract_frames`: the video is cut into 60 stretches; the sharpest frame of each is kept.
 2. `roompipe.model.run_mapanything`: one MapAnything pass over the frames (Apache weights, revision `00f9c24`). It returns a camera for every frame and a 3D point for every pixel. The least certain fifth of the points is dropped.
-3. `roomgeom.level.level_room`: find "up" from the cameras, put the floor at z = 0, thin to one point per 2 cm, keep about 20 anchor frames.
+3. `roomgeom.level.level_room`: a first guess at "up" from how the phone was held; then the floor, found as the lowest flat layer below the phone (`floor_layer`), and its own plane (`floor_plane`), which gives the final "up". The floor goes to z = 0; the points are thinned to one per 2 cm; about 20 anchor frames are kept. `room.json` says where "up" came from (`up_from`) and how far the floor was from the phone's guess (`floor_tilt_deg`).
 4. `roompipe.build.build_room`: write the room folder: points (PLY and `bin`), anchors, every frame with its camera and per-pixel points, `room.json`.
 5. Optional, `roompipe.place.place_photos`: each batch of photos goes through the model twice with different anchors; a photo is pinned only if the two answers agree.
 6. `roompipe.session.RunLog`: `run.json` records the GPU, the pinned versions, seconds and peak GPU memory per step, and any failure. A failed step stops the later ones, and the record is still saved.
@@ -469,10 +469,14 @@ If the GPU runs out of memory, the build is retried with 40, then 30 frames (`se
 | The code reaches Colab as a zip | Claude, 17 Nov | The repository is private, so Colab cannot fetch it |
 | Photos are copied with no EXIF | Claude, 17 Nov | Their GPS position never leaves the copy step; the date and focal length are read first |
 | A stand-in model can run the whole notebook | Claude, 17 Nov | The notebook could be tested end to end without a GPU. Everything it makes is labelled a made-up room |
+| **The floor is the lowest flat layer, and the room is levelled by the floor's own plane; the first real room is corrected on the laptop, not rebuilt** | **Builder, 18 Nov** (option 1 of 3, on Claude's recommendation) | The first real run took the bed top for the floor: the old rule kept the fullest 1 cm slice, and the bed top beat the floor 3,471 points to 3,351. "Up" from the phone also leaned 1.9° toward the way it faced most, which spread the floor over several slices. The model's output was fine, so only the last step needed redoing. The other options were importing the room as it was (everything 0.66 m too low) or filming again (the old code would pick the bed again) |
+| A layer counts if it is at least half as full as the fullest and twice a typical slice | Claude, 18 Nov | Walls alone make "typical" slices. On the first real room (counting each slice with its two neighbours) the floor reached 2.55 times a typical slice and the bed top 2.38 times: both stand out, and the lower one is taken |
+| The floor's plane is found by RANSAC (300 tries, 2 cm), only among planes within 15° of the phone's up | Claude, 18 Nov | Walls cross the floor layer and pulled a plain fit off (a test showed it). The 15° limit means a wall or a ramp can never become the floor; real floors were 2° off |
+| Re-levelling uses the smallest turn that levels the floor, on the room's own `points.ply`, into a new folder | Claude, 18 Nov | The smallest turn keeps the room's heading, so nothing else moves. The original zip stays as the record of the GPU run; `room.json` gets a `relevelled` record with the old values |
 
 ### Known gaps
 
-- The real model call has never run. Whether 60 frames fit a T4 and how long a room takes are unknown.
+- **First real run, 18 Nov 2026 (13:42 UTC), Colab T4:** 60 frames fit in one try (peak 10.9 of 15.6 GB); the model pass took 36 s and the build step 63 s. Several walls show as parallel lines about 10 cm apart, so some frames do not line up exactly. Neither of the two photos was placed: the anchors lined up only to within 1.16 m.
 - Nothing corrects the model's scale. If its "metric" output is 5% off, so is the room.
 - Portrait photos run with landscape frames are cropped by the model's image loader.
 

@@ -96,6 +96,9 @@ def build_room(frame_paths, run_model, out_dir, voxel=0.02, align_walls=False, f
         "has_colors": colors is not None,
         "box": {"low": low.tolist(), "high": high.tolist()},  # metres; floor is z = 0
         "up_consistency": round(float(level["consistency"]), 4),
+        # Which way is up came from the floor's own plane, or from the phone when no floor plane was found.
+        "up_from": level["up_from"],
+        "floor_tilt_deg": None if level["floor_tilt_deg"] is None else round(float(level["floor_tilt_deg"]), 3),
         "wall_aligned": bool(align_walls),
         "voxel_m": voxel,
         "points_files": points_files,
