@@ -23,7 +23,7 @@
       <ul class="card-list">
         {% for scan in scans %}
           <li>
-            <span>Filmed {{ scan.taken_on|date:"j M Y" }} · {{ scan.get_status_display }}</span>
+            <span>Filmed {{ scan.taken_on|date:"j M Y" }} · {{ scan.get_status_display }}{% if scan.room_info.made_up %} · <strong>MADE-UP ROOM</strong> (not a reconstruction){% endif %}</span>
             <span class="page-head__links">
               {% if scan.status == "ready" %}
                 <a href="{% url 'scan_room' scan.pk %}">View the room in 3D</a>

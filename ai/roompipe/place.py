@@ -55,11 +55,14 @@ def place_photos(room_dir, photo_paths, run_model, thresholds=Thresholds(), save
     results = []
     for start in range(0, len(photo_paths), PHOTOS_PER_PASS):
         batch = photo_paths[start : start + PHOTOS_PER_PASS]
+        # The model runs outside the `try` below: a pass that fails (fp16 giving
+        # values that are not real numbers, an image the loader skipped) stops
+        # here, so it is recorded as a failure and never mistaken for photos the
+        # model was honestly unsure about.
+        outputs = [run_model([anchor_paths[i] for i in half] + batch) for half in halves]
         try:
-            tries = []
-            for half in halves:
-                output = run_model([anchor_paths[i] for i in half] + batch)
-                tries.append(place_from_poses(output.poses, anchor_poses[half]))
+            tries = [place_from_poses(output.poses, anchor_poses[half])
+                     for output, half in zip(outputs, halves, strict=True)]
             (try_a, residual_a), (try_b, residual_b) = tries
             checked = check_two_tries(try_a, residual_a, try_b, residual_b, box, thresholds)
             residual = max(residual_a, residual_b)

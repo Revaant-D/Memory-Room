@@ -48,9 +48,9 @@ The third feature was chosen from these on 17 Nov (A):
 | Room import | `manage.py import_room <scan> <room folder or zip>`: checks a room built in Colab, attaches its points (PLY) to the scan, keeps its facts, marks it ready. Made-up rooms only with `--made-up`, and labelled | `rooms/management/commands/import_room.py`, `rooms/roomfolder.py` | 21 tests; run on the made-up demo room. **Not yet run on a real room** |
 | 3D room page | `/scans/<n>/room/`: the room as coloured dots in three.js, photos as dots (tap one to see it), two views, a MADE-UP ROOM notice when it applies; linked from the place page; owner only | `rooms/views.py`, `rooms/templates/rooms/scan_room.html`, `static/viewer/` | 12 tests; seen in Chromium with the made-up demo room, at desktop and phone width. **Not yet shown a real room or opened on a phone** |
 | Data model | Place, Scan, Memory and Pin tables with their rules | `rooms/models.py` | Tests |
-| Build-room notebook | Video → 60 sharp frames → MapAnything → levelled, coloured 3D points, with each frame's camera | `ai/build_room_colab.ipynb`, `ai/roompipe`, `ai/roomgeom` | 83 tests and two full rehearsals, all with a stand-in model. **Never run on a GPU or a real video** |
+| Build-room notebook | Video → 60 sharp frames → MapAnything → levelled, coloured 3D points, with each frame's camera | `ai/build_room_colab.ipynb`, `ai/roompipe`, `ai/roomgeom` | 96 tests and full rehearsals, all with a stand-in model. **Never run on a GPU or a real video** |
 
-Django tests passing on 18 Nov 2026: 229 of 229.
+Django tests passing on 18 Nov 2026: 240 of 240.
 
 ## AI features
 

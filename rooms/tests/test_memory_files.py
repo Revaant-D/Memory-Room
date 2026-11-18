@@ -36,6 +36,14 @@ class PhotoFileTests(TempMediaTestCase):
         self.assertEqual(response["Content-Type"], "image/jpeg")
         self.assertEqual(body, self.original)
 
+    def test_a_file_with_another_ending_is_never_served_as_a_page(self):
+        # Review, 18 Nov: the type came from the stored ending. A row whose file
+        # ends ".html" (put in through the shell or the admin) must not become a page.
+        memory = Memory.objects.create(place=self.place, photo=jpeg_file("evil.html"))
+        response, _ = self.fetch(f"/memories/{memory.pk}/photo/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/octet-stream")
+
     def test_photo_may_be_kept_only_by_the_owners_browser(self):
         response, _ = self.fetch()
         self.assertEqual(response["Cache-Control"], "private, max-age=3600")

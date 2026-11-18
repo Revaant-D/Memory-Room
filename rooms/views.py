@@ -5,17 +5,23 @@ anyone else to the login page) and gets its place through rooms/access.py,
 which answers 404 for a place that is not this user's.
 """
 
+import os
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import FileResponse, Http404
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils import timezone
 
 from rooms.access import get_own_memory, get_own_place, get_own_scan
 from rooms.forms import MemoryForm, MemoryUploadForm, PlaceForm, ScanForm
 from rooms.models import Memory, Place, Scan
 from rooms.photos import photo_taken_on
+
+# The only types a photo file is ever served as (see memory_photo).
+PHOTO_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
 
 
 def home(request):
@@ -160,8 +166,12 @@ def scan_room(request, pk):
     ]
     # Handed to the page's script as JSON (json_script in the template), so a
     # caption can never be read as code.
+    # The file's own random name is added to the address, so the address changes
+    # whenever a room is imported again, and a browser never draws an older
+    # room (a made-up one, say) from its cache. The view ignores it.
+    version = os.path.basename(scan.points_file.name).split("-")[0]
     room_data = {
-        "points": reverse("scan_points", kwargs={"pk": scan.pk}),
+        "points": reverse("scan_points", kwargs={"pk": scan.pk}) + f"?v={version}",
         "box": scan.room_info.get("box"),
         "pins": pins,
     }
@@ -206,11 +216,12 @@ def memory_create(request, slug):
             # atomic: either every photo gets its row, or none does.
             with transaction.atomic():
                 for photo in photos:
-                    Memory.objects.create(
-                        place=place,
-                        photo=photo,
-                        taken_on=photo_taken_on(photo),  # None when the photo has no date
-                    )
+                    taken_on = photo_taken_on(photo)  # None when the photo has no date
+                    if taken_on and taken_on > timezone.localdate():
+                        # A camera clock set ahead. The edit page refuses future
+                        # dates, so keep none rather than one that can't be saved back.
+                        taken_on = None
+                    Memory.objects.create(place=place, photo=photo, taken_on=taken_on)
             count = len(photos)
             messages.success(request, f"{count} photo{'' if count == 1 else 's'} added.")
             return redirect(place)
@@ -233,7 +244,11 @@ def memory_photo(request, pk):
     except (FileNotFoundError, ValueError):
         # The row exists but its file is gone (media/ was cleared, say).
         raise Http404("This photo's file is missing.")
-    response = FileResponse(file)  # sends the file in pieces and closes it afterwards
+    # The type comes from a short list, never guessed from the stored name, so a
+    # file can only ever be shown as a picture or offered as a download.
+    ending = os.path.splitext(memory.photo.name)[1].lower()
+    kind = PHOTO_TYPES.get(ending, "application/octet-stream")
+    response = FileResponse(file, content_type=kind)  # sends the file in pieces and closes it afterwards
     # The owner's browser may keep its copy for an hour; shared caches may not keep one.
     response["Cache-Control"] = "private, max-age=3600"
     return response

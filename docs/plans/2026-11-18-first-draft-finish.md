@@ -17,20 +17,22 @@ This is the single ordered list of everything left before the first draft: who d
 
 | Step | Who | What | Needs | Status |
 | --- | --- | --- | --- | --- |
-| B0 | B | Confirm where the model runs: Colab (recommended) or the laptop GPU | — | ☑ 18 Nov, ~01:45. **Colab** (builder) |
-| B1 | B | Film the room, take the placement photos, measure the room | — | ☐ |
-| B2 | B | Put the video, photos and code zip in Drive; run the Colab notebook | B1 | ☐ |
-| B3 | B | Download the room zip to Downloads; tell Claude its path; copy the room video to the laptop | B2 | ☐ |
+| B0 | B | Confirm where the model runs: Colab (recommended) or the laptop GPU | — | ☑ 18 Nov, ~00:30. **Colab** (builder) |
+| B1 | B | Film the room, take the placement photos, measure the room | — | ◐ 18 Nov: filmed. The room is tight (a bed in a corner, a corridor of about 5 ft), so no loop: corridor passes both ways, an arm's-length swing at the far end, a pass from the bed, three paper sheets instead of five. Photos and tape measurements still to come |
+| B2 | B | Put the video, photos and code zip in Drive; run the Colab notebook | B1 | ☑ 18 Nov, 13:42 UTC (7:42 AM Chicago), `room-20261118-1342`. T4, fp16, 60 frames in one try, 393,033 points, no problems; build 63 s, peak 10.9 GB. Video 88.7 s. Only 2 photos in `photos/`, both old and landscape; both "ask" (anchors re-matched only to 1.16 m) |
+| B3 | B | Download the room zip to Downloads; tell Claude its path; copy the room video to the laptop | B2 | ◐ Zip `room-20261118-1342.zip` in the builder's Downloads (unpacked for reading in Claude's scratchpad, not in the project). Video not yet uploaded to the app as a scan |
 | B4 | B | Say in one sentence why Memory Room replaced Clearance | — | ☐ |
 | B5 | B | Decide how the instructor reaches the private repository | — | ☐ |
-| C1 | C | Apply chunk 5 (photos) from the `D2a-D3a` kit | — | ☑ 18 Nov, 00:30. Verify all `ok`; applied `chunk5-parts` + `chunk5-D2a-D3a`; no migration; **195 tests pass**; real server 14/14 + `/media/` path 404. Recorded: system map piece 7, plan "As built (chunk 5)", features.md |
-| C2 | C | `FIRST_DRAFT.md`, section 1: product scope (requirement 1) | B4 for one sentence | ◐ 18 Nov, 01:00. Written; the "Why" line holds a marked placeholder until B4 |
-| C3 | C | `FIRST_DRAFT.md`, section 3: progress and roadmap (requirement 4) | — | ☑ 18 Nov, 01:00. The brief's six rows plus a milestones table; dates are the proposal, for B7 to confirm. Update the status cells after C6/C7 |
-| C4 | C | `FIRST_DRAFT.md`, section 2: AI plan, written before the run (requirement 3) | — | ☑ 18 Nov, 01:00. "The first real run" line is a placeholder for C8. AI tests re-run: 91 pass |
-| C5 | C | `README.md` (plan chunk 6, Task 13) | C1 | ☑ 18 Nov, 01:15. Written from what has run; add `import_room` and the viewer page once C6/C7 are built. Clean-copy check is in C10 |
-| Sync 1 | — | The room zip has arrived | B3 | ☐ |
-| C6 | C | The `import_room` management command | Sync 1 | ◐ 18 Nov, 01:20. Built against the demo room before Sync 1: 21 tests (suite **216**); demo zip imported on a scratch copy. New: `Scan.room_info` + migration `0004` (applied to the builder's db), `.ply` ending, `rooms/roomfolder.py`, `*.ply`/`*.zip` in `.gitignore`. System map piece 8. **Left: import the real room after Sync 1** |
-| C7 | C | The 3D viewer page inside the app | C6 | ◐ 18 Nov, 01:35. `/scans/<pk>/room/` + `/scans/<pk>/points.ply` (owner-checked), place-page link, pins as JSON and dots, tap shows the photo; admin Scans list shows "Id". 12 + 1 tests (suite **229**). Seen in Chromium with the made-up demo room at desktop and 390 px. System map piece 9. **Left: look at it with the real room after Sync 1 (no screenshot in git without asking)** |
+| C1 | C | Apply chunk 5 (photos) from the `D2a-D3a` kit | — | ☑ 18 Nov, ~00:05. Verify all `ok`; applied `chunk5-parts` + `chunk5-D2a-D3a`; no migration; **195 tests pass**; real server 14/14 + `/media/` path 404. Recorded: system map piece 7, plan "As built (chunk 5)", features.md |
+| C2 | C | `FIRST_DRAFT.md`, section 1: product scope (requirement 1) | B4 for one sentence | ◐ 18 Nov, by ~00:10. Written; the "Why" line holds a marked placeholder until B4 |
+| C3 | C | `FIRST_DRAFT.md`, section 3: progress and roadmap (requirement 4) | — | ☑ 18 Nov, by ~00:10. The brief's six rows plus a milestones table; dates are the proposal, for B7 to confirm. Update the status cells after C6/C7 |
+| C4 | C | `FIRST_DRAFT.md`, section 2: AI plan, written before the run (requirement 3) | — | ☑ 18 Nov, by ~00:10. "The first real run" line is a placeholder for C8. AI tests re-run: 91 pass |
+| C5 | C | `README.md` (plan chunk 6, Task 13) | C1 | ☑ 18 Nov, by ~00:10. Written from what has run; add `import_room` and the viewer page once C6/C7 are built. Clean-copy check is in C10 |
+| Push 1 | C | Early push, at the builder's word (18 Nov, commits at 00:44) | — | ☑ Branch `first-draft`: `a9748fe`, `9bd0fe5`, `116d8d2`. Clean-copy check passed (229 tests, server starts). PR #1 into `master` for the review. **C10 now ends with merging PR #1, not a push to `master`** |
+| Review 1 | B, C | `/code-review` on PR #1 (builder ran it, ~00:45; fixes done by 01:06) | Push 1 | ☑ 15 findings, all checked and real; 12 fixed with a failing test first, 3 deferred (#11, #14, #15). Django **240**, AI **96**, rehearsal passed, code zip re-packed (07:03 UTC = 01:03 Chicago; re-pack again after committing). Table in `docs/system-map.md`, "Code review, 18 Nov". **Fixes not committed yet: ask the builder** |
+| Sync 1 | — | The room zip has arrived | B3 | ☑ 18 Nov, morning. **Finding: the floor finder took the bed top as the floor.** `floor_height` keeps the fullest 1 cm slice; the bed top (0.71 m up, flat) beat the real floor 3,471 to 3,351 points because the real floor is spread over several slices by a 2° lean of "up" (the facing-direction bias). Cameras sit 0.62 m above the false floor, 1.29 m above the real one. Fix put to the builder: lowest big flat layer as the floor, level by its plane, re-level the downloaded room on the laptop (no new GPU run) |
+| C6 | C | The `import_room` management command | Sync 1 | ◐ 18 Nov, ~00:15. Built against the demo room before Sync 1: 21 tests (suite **216**); demo zip imported on a scratch copy. New: `Scan.room_info` + migration `0004` (applied to the builder's db), `.ply` ending, `rooms/roomfolder.py`, `*.ply`/`*.zip` in `.gitignore`. System map piece 8. **Left: import the real room after Sync 1** |
+| C7 | C | The 3D viewer page inside the app | C6 | ◐ 18 Nov, ~00:20. `/scans/<pk>/room/` + `/scans/<pk>/points.ply` (owner-checked), place-page link, pins as JSON and dots, tap shows the photo; admin Scans list shows "Id". 12 + 1 tests (suite **229**). Seen in Chromium with the made-up demo room at desktop and 390 px. System map piece 9. **Left: look at it with the real room after Sync 1 (no screenshot in git without asking)** |
 | C8 | C | The AI section filled in with the run's real numbers | Sync 1 | ☐ |
 | C9 | C | If there is time: the experiment's AI placements shown as dots | C7 | ☐ |
 | B6 | B, with C | One walk-through of the whole app, run by the builder | C1, C7 | ☐ |
@@ -349,6 +351,7 @@ Automating this means `import_room` has to know which memory each photo is, and 
 | Out of memory even at 30 frames | `run.json` records it. It is a result: write it up. After the draft, try a bigger GPU (Modal L4, about $0.80 an hour) |
 | "not real numbers" | Set `PRECISION = "fp32"` in section 1 and Run all again |
 | "could not be levelled" | Film again: phone upright, floor in view (filming guide) |
+| The room comes out tilted (in `preview.png`'s side view the floor slopes or is a thick band) | `estimate_up` (`ai/roomgeom/level.py`) averages each frame's "down", so a down-tilted phone leans the room toward whichever way it faced most. A loop cancels this; the builder's tight room may not. The agreement score does not catch it. Film again, facing each way for about the same time, or (the builder's call) make `estimate_up` use the frames' left-right axes, which pitch does not affect |
 | The frames are sideways on the sheet | Stop. Re-save the video from the phone's gallery, or film again |
 | The room looks rough or wrong | Still a result. Note what is wrong (bent floor, doubled walls, scale against the tape) and show it as it is |
 | Placement pins nothing, or pins wrongly | A result. Report the counts and how far off the photos landed; hand placement is planned for 8 Dec |

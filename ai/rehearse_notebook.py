@@ -32,10 +32,24 @@ NOTEBOOK = AI / "build_room_colab.ipynb"
 CODE_ZIP = AI / "dist" / "memory-room-ai.zip"
 
 
+MARKER = ".memory-room-rehearsal"  # left in the work folder, so a later rehearsal may reuse it
+
+
+def check_work_folder(work):
+    """Stop unless `work` is new, empty, or made by an earlier rehearsal: make_inputs empties it."""
+    if work.exists() and any(work.iterdir()) and not (work / MARKER).exists():
+        raise SystemExit(
+            f"{work} is not empty, and this script deletes what is in its work folder. "
+            "Give a new or empty folder (outside the project)."
+        )
+
+
 def make_inputs(work):
     """A test video with moving detail (so every stretch has a sharp frame) and three photos."""
+    check_work_folder(work)
     shutil.rmtree(work, ignore_errors=True)
     (work / "photos").mkdir(parents=True)
+    (work / MARKER).write_text("made by ai/rehearse_notebook.py\n", encoding="utf-8")
     shutil.copyfile(CODE_ZIP, work / "memory-room-ai.zip")
     rng = np.random.default_rng(0)
     base = (rng.random((640, 720, 3)) * 255).astype(np.uint8)

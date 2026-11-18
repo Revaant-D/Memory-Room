@@ -163,6 +163,18 @@ def ply_point_count(room):
     return count
 
 
+def _is_stand_in(model_id):
+    # The stand-in model's two labels: "MADE-UP ROOM: stand-in model, ..." in
+    # run.json and "stand-in (made-up room, ...)" in room.json.
+    return "stand-in" in str(model_id or "")
+
+
+def _same_model(a, b):
+    if _is_stand_in(a) or _is_stand_in(b):
+        return _is_stand_in(a) and _is_stand_in(b)
+    return a == b
+
+
 def check_room(room, made_up_allowed=False):
     """Read and check a room. Returns the facts to keep on the scan (Scan.room_info).
 
@@ -173,6 +185,13 @@ def check_room(room, made_up_allowed=False):
         why = run.get("stopped_because")
         raise RoomError(f"There is no {ROOM_FILE} here, so the run did not build a room."
                         + (f" {RUN_FILE} says it stopped because {why}" if why else ""))
+    if run.get("finished") is False:
+        # A rerun that failed early can leave an earlier run's room files beside
+        # its own run.json; they must not be taken for this run's room.
+        why = run.get("stopped_because")
+        raise RoomError(f"{RUN_FILE} says this run did not finish"
+                        + (f": it stopped because {why}" if why else "")
+                        + ". Any room files beside it are from another run.")
     facts = _read_json(room, ROOM_FILE)
     if facts.get("version") != ROOM_VERSION:
         raise RoomError(f"{ROOM_FILE} is version {facts.get('version')}; "
@@ -185,8 +204,12 @@ def check_room(room, made_up_allowed=False):
                         f"but {POINTS_FILE} holds {count:,}.")
 
     model = facts.get("model_info") if isinstance(facts.get("model_info"), dict) else {}
-    model_id = run.get("model_id") or model.get("model_id")
-    made_up = run.get("stand_in") is True or "stand-in" in str(model_id or "")
+    run_model, room_model = run.get("model_id"), model.get("model_id")
+    if run_model and room_model and not _same_model(run_model, room_model):
+        raise RoomError(f"{RUN_FILE} and {ROOM_FILE} disagree on which model made this room "
+                        f"({run_model}; {room_model}), so they are from different runs.")
+    model_id = run_model or room_model
+    made_up = run.get("stand_in") is True or _is_stand_in(run_model) or _is_stand_in(room_model)
     if made_up and not made_up_allowed:
         raise RoomError("This is a MADE-UP ROOM, made by the stand-in model, not a reconstruction. "
                         "To import it anyway, labelled as made up, add --made-up.")

@@ -66,9 +66,18 @@ class ScanRoomTests(TempMediaTestCase):
         self.assertContains(response, 'id="room"')
         self.assertContains(response, "viewer/roomviewer.js")
         data = self.page_data(response)
-        self.assertEqual(data["points"], self.points())
+        self.assertTrue(data["points"].startswith(self.points() + "?v="), data["points"])
         self.assertEqual(data["box"], BOX)
         self.assertEqual(data["pins"], [])
+
+    def test_points_address_changes_when_the_room_is_replaced(self):
+        # Review, 18 Nov: the browser keeps the points for an hour. Importing a real
+        # room over a made-up one must not leave the made-up points on screen.
+        before = self.page_data(self.client.get(self.page()))["points"]
+        self.scan.points_file.save("points.ply", ContentFile(PLY), save=True)
+        after = self.page_data(self.client.get(self.page()))["points"]
+        self.assertNotEqual(before, after)
+        self.assertTrue(after.startswith(self.points()))
 
     def test_scan_not_built_gives_404(self):
         scan = Scan.objects.create(place=self.place, video=video_file())
@@ -120,6 +129,14 @@ class ScanRoomTests(TempMediaTestCase):
         self.assertEqual(self.client.get(self.points()).status_code, 404)
 
     # --- the place page ---
+
+    def test_place_page_labels_a_made_up_room(self):
+        # Review, 18 Nov: only the 3D page said so; the place page looked the same.
+        self.ready_scan(made_up=True)
+        self.assertContains(self.client.get(self.place.get_absolute_url()), "MADE-UP ROOM")
+
+    def test_place_page_does_not_label_a_real_room(self):
+        self.assertNotContains(self.client.get(self.place.get_absolute_url()), "MADE-UP")
 
     def test_place_page_links_only_ready_scans(self):
         waiting = Scan.objects.create(place=self.place, video=video_file())

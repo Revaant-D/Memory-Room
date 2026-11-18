@@ -252,6 +252,19 @@ class PlaceTests(PipeTestCase):
         self.assertEqual(broken["reason"], "the model's answer was not a real position")
         self.assertEqual(results[1]["placed_by"], "ai")  # one bad photo does not spoil the rest
 
+    def test_a_model_failure_is_not_recorded_as_photos_to_ask_about(self):
+        # Review, 18 Nov: a model pass that failed (fp16 giving "not real numbers",
+        # say) was written down as "ask the person" for every photo in the batch.
+        model = self.model()
+        self.build(model)
+
+        def failing_model(paths):
+            raise ValueError('the model\'s output is not real numbers; set PRECISION = "fp32"')
+
+        with self.assertRaisesRegex(ValueError, "fp32"):
+            place_photos(self.dir / "room", self.photos, failing_model)
+        self.assertFalse((self.dir / "room" / "placements.json").exists())
+
     def test_save_can_be_turned_off(self):
         model = self.model()
         self.build(model)

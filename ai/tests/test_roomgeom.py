@@ -323,6 +323,16 @@ class PlaceTests(unittest.TestCase):
         self.assertEqual(results[2]["reason"], "the spot is outside the room")
         self.assertIsNone(results[2]["placed_by"])
 
+    def test_the_pinned_spot_itself_must_be_inside_the_room(self):
+        # Review, 18 Nov: the check looked at the first try only, but the pin goes
+        # at the middle of the two tries, which can be further out.
+        face = np.array([1.0, 0.0, 0.0])
+        a = [(np.array([4.29, 1.0, 1.0]), face)]  # just inside the 0.3 m margin past x = 4
+        b = [(np.array([4.98, 1.0, 1.0]), face)]  # 0.69 m further out: the tries still "agree"
+        results = check_two_tries(a, 0.0, b, 0.0, self.box)
+        self.assertEqual(results[0]["reason"], "the spot is outside the room")
+        self.assertIsNone(results[0]["placed_by"])
+
     def test_margin_allows_a_spot_just_past_the_wall(self):
         self.assertTrue(inside([4.2, 1.0, 1.0], self.box, margin=0.3))
         self.assertFalse(inside([4.4, 1.0, 1.0], self.box, margin=0.3))

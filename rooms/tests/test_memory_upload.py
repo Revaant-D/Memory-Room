@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.messages import get_messages
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase, override_settings
+from django.utils import timezone
 from django.utils.datastructures import MultiValueDict
 from PIL import Image
 
@@ -121,6 +122,27 @@ class MemoryUploadPageTests(TempMediaTestCase):
                 response, f"/accounts/login/?next={self.url}", fetch_redirect_response=False
             )
         self.assertEqual(Memory.objects.count(), 0)
+
+    def test_stored_ending_follows_the_content(self):
+        # Review, 18 Nov: the ending came from the name the browser sent, so a
+        # JPEG named "evil.html" was stored as .html and served as a web page.
+        self.upload(jpeg_file("evil.html"))
+        self.assertTrue(Memory.objects.get().photo.name.endswith(".jpg"))
+
+    def test_png_named_jpg_is_stored_as_png(self):
+        buffer = io.BytesIO()
+        Image.new("RGB", (8, 8)).save(buffer, "PNG")
+        self.upload(SimpleUploadedFile("photo.jpg", buffer.getvalue(), content_type="image/jpeg"))
+        self.assertTrue(Memory.objects.get().photo.name.endswith(".png"))
+
+    def test_future_date_inside_a_photo_is_not_kept(self):
+        # Review, 18 Nov: a camera clock set ahead gave a date the edit page then refused.
+        ahead = timezone.localdate() + datetime.timedelta(days=3)
+        self.upload(jpeg_file(taken=datetime.datetime.combine(ahead, datetime.time(12, 0))))
+        memory = Memory.objects.get()
+        self.assertIsNone(memory.taken_on)
+        response = self.client.post(f"/memories/{memory.pk}/edit/", {"caption": "Move-in day", "taken_on": ""})
+        self.assertEqual(response.status_code, 302)
 
     def test_upload_page_can_carry_files(self):
         response = self.client.get(self.url)

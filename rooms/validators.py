@@ -10,6 +10,8 @@ from PIL import Image
 
 VIDEO_ENDINGS = (".mp4", ".mov")
 PHOTO_FORMATS = {"JPEG", "PNG", "WEBP"}
+# The ending a stored photo gets, from the format found inside it.
+PHOTO_ENDINGS = {"JPEG": ".jpg", "PNG": ".png", "WEBP": ".webp"}
 
 
 def size_words(number_of_bytes):
@@ -60,6 +62,10 @@ def validate_photo(file):
 
     An iPhone's HEIC photo fails the second check, because Pillow cannot open
     HEIC, and gets a message that says so instead of an error page.
+
+    Returns the format Pillow found ("JPEG", "PNG" or "WEBP"), so the caller
+    can name the stored file by its content (PHOTO_ENDINGS), never by the
+    name the browser sent.
     """
     if file.size > settings.MAX_PHOTO_BYTES:
         limit = size_words(settings.MAX_PHOTO_BYTES)
@@ -75,3 +81,4 @@ def validate_photo(file):
         file.seek(0)  # leave the file rewound for whoever reads it next
     if kind not in PHOTO_FORMATS:
         raise ValidationError("Upload JPEG, PNG or WebP photos. HEIC is not supported yet.")
+    return kind

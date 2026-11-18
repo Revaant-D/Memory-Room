@@ -10,6 +10,9 @@ decision, 17 Nov 2026). By 8 Dec a Django view starts the GPU job itself, and
 its result goes through the same checks.
 """
 
+import shutil
+import tempfile
+import zipfile
 from pathlib import Path
 
 from django.core.files import File
@@ -38,15 +41,27 @@ class Command(BaseCommand):
         except Scan.DoesNotExist:
             raise CommandError(f"No scan number {scan_id}. The admin site lists scans with their numbers.")
 
+        points = tempfile.TemporaryFile()  # removed when closed
         try:
             with open_room(Path(room)) as found:
                 info = check_room(found, made_up_allowed=made_up)
-                old = scan.points_file.name if scan.points_file else None
-                with found.open(POINTS_FILE) as points:
-                    # Copied into media/, under a new random name ending "-points.ply".
-                    scan.points_file.save(POINTS_FILE, File(points, name=POINTS_FILE), save=False)
+                with found.open(POINTS_FILE) as source:
+                    # Read it all once, here: a damaged zip shows itself now,
+                    # before anything is written into media/.
+                    shutil.copyfileobj(source, points)
         except RoomError as problem:
+            points.close()
             raise CommandError(str(problem)) from problem
+        except (zipfile.BadZipFile, OSError) as problem:
+            points.close()
+            raise CommandError(f"The room's files could not be read; the zip or folder may be damaged "
+                               f"({problem}). Download it again.") from problem
+
+        old = scan.points_file.name if scan.points_file else None
+        with points:
+            points.seek(0)
+            # Copied into media/, under a new random name ending "-points.ply".
+            scan.points_file.save(POINTS_FILE, File(points, name=POINTS_FILE), save=False)
 
         info["imported"] = timezone.now().isoformat(timespec="seconds")
         scan.room_info = info

@@ -71,7 +71,7 @@ Then open http://127.0.0.1:8000/ and:
 .venv\Scripts\python.exe manage.py test
 ```
 
-229 tests, all passing on 18 Nov 2026. They use a temporary database and a temporary upload folder, so they never touch your own data.
+240 tests, all passing on 18 Nov 2026. They use a temporary database and a temporary upload folder, so they never touch your own data.
 
 The AI code has its own tests, which need numpy and OpenCV and run outside this environment. `ai/README.md` says how.
 

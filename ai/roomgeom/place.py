@@ -118,7 +118,7 @@ def check_two_tries(try_a, residual_a, try_b, residual_b, box, thresholds=Thresh
             reason = f"two tries {gap:.1f} m apart"
         elif turn >= thresholds.turn_deg:
             reason = f"two tries faced {turn:.0f} degrees apart"
-        elif not inside(pos_a, box, thresholds.box_margin_m):
+        elif not inside(position, box, thresholds.box_margin_m):  # the spot that would be pinned
             reason = "the spot is outside the room"
         else:
             reason = ""

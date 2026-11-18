@@ -25,7 +25,7 @@ All commands are run from the project folder, in PowerShell. They call the proje
 | Apply database changes | `.venv\Scripts\python.exe manage.py migrate` |
 | Open a Python prompt with the app loaded | `.venv\Scripts\python.exe manage.py shell` |
 
-There are 229 tests. All 229 passed on 18 Nov 2026.
+There are 240 tests. All 240 passed on 18 Nov 2026, after the fixes from the code review of 18 Nov (see "Code review, 18 Nov" near the end).
 
 | To do this | Run this |
 | --- | --- |
@@ -681,6 +681,30 @@ On a place's page, each ready scan has a "View the room in 3D" link. One page pe
 
 ---
 
+## Code review, 18 Nov 2026
+
+The builder ran `/code-review` on PR #1 (everything since `first-push`) at about 00:45 on 18 Nov. It reported 15 findings; Claude checked each against the code and all 15 held. 12 were fixed, each with a test that was seen to fail first; 3 were deferred. Afterwards: 240 Django tests and 96 AI tests pass, the code zip was re-packed, and the notebook rehearsal passed.
+
+| # | Finding | Piece | What was done | Test |
+| --- | --- | --- | --- | --- |
+| 1 | `rehearse_notebook.py` emptied whatever folder it was given | 6 | It refuses a folder holding anything but an earlier rehearsal | `ai/tests/test_rehearse.py` (3) |
+| 2 | A photo's stored ending came from the browser's file name, and its type from that ending: a JPEG named `.html` was served as a web page | 7 | The ending now comes from the format found inside the photo, and the photo view serves only image types (anything else as a download) | `test_stored_ending_follows_the_content`, `test_png_named_jpg_is_stored_as_png`, `test_a_file_with_another_ending_is_never_served_as_a_page` |
+| 3 | The points file was cached for an hour at a fixed address, so a re-imported room could show the old (perhaps made-up) points | 9 | The address carries the file's random name, which changes with every import | `test_points_address_changes_when_the_room_is_replaced` |
+| 4 | The import ignored a `run.json` that says the run did not finish, and did not check that `run.json` and `room.json` name the same model | 8 | Both are refused, with the reason | `test_failed_run_beside_an_old_room_refused`, `test_files_from_different_runs_refused` |
+| 5 | A failed model pass during placement was recorded as "ask the person" for every photo | 6 | The model call is outside the "could not fit" handler; a failure stops placement and is written in `run.json` | `test_a_model_failure_is_not_recorded_as_photos_to_ask_about` |
+| 6 | A rerun could leave an earlier room beside a new, failed `run.json`, and the Drive save merged folders of the same name | 6 | A run empties its room folder at the start; the save uses a new name when one exists | Rehearsal (passed); #4 guards the import |
+| 7 | A photo dated in the future (camera clock ahead) was stored, and its caption then could not be saved | 7 | A future date from inside a photo is not kept | `test_future_date_inside_a_photo_is_not_kept` |
+| 8 | `FIRST_DRAFT.md` read as if the first real run had happened | — | Reworded: "not yet run; planned for 18 Nov" | Read by hand |
+| 9 | The place page did not label a made-up room | 9 | "MADE-UP ROOM (not a reconstruction)" beside that scan | `test_place_page_labels_a_made_up_room` |
+| 10 | A damaged zip crashed the import with a traceback and could leave a partial file in `media/` | 8 | The points are copied to a temporary file first; a damaged zip is refused with a message, and nothing reaches `media/` | `test_damaged_zip_refused`, `test_damaged_zip_found_while_copying_leaves_no_file` |
+| 11 | Files are deleted when their rows are, inside the database transaction; a rollback brings the rows back without the files | 7 | **Deferred.** Rare on SQLite with one user; the fix (`transaction.on_commit`) changes several existing tests | — |
+| 12 | The "inside the room" check looked at the first try, but the pin goes at the middle of the two | 6 | It checks the spot that is pinned | `test_the_pinned_spot_itself_must_be_inside_the_room` |
+| 13 | Tapping a dot did not enlarge it | 9 | It does (`viewer.selectPin`) | Seen in Chromium |
+| 14 | The page's import map uses `{% static %}` on a folder, which fails with the static storage used at deployment | 9 | **Deferred** to deployment; listed below | — |
+| 15 | `points.bin` is still written though the viewer reads PLY; `parseBin` and `Place.newest_ready_scan` are unused | 6, 9 | **Deferred**: a clean-up, nothing breaks | — |
+
+---
+
 ## Before deployment
 
 Things that are right for a laptop and wrong for a public site. Nothing here is a fault today.
@@ -688,3 +712,5 @@ Things that are right for a laptop and wrong for a public site. Nothing here is 
 - Cookies are not marked secure-only, and plain HTTP is not redirected to HTTPS. `manage.py check --deploy` lists four warnings, all of this kind.
 - With debug off, Django's development server stops serving the stylesheet. A real host serves static files itself.
 - SQLite and local disk are to be replaced (Postgres and a file bucket in the technical design).
+- The 3D page's import map points `{% static %}` at a folder (`viewer/vendor/`). With a hashed static storage (`ManifestStaticFilesStorage`, WhiteNoise) that fails and every 3D page gives 500. Point it at the one `OrbitControls.js` file, or build the folder address from `STATIC_URL` (code review, 18 Nov, #14).
+- Files are deleted inside the delete's transaction (`rooms/signals.py`); move to `transaction.on_commit` before a real database (code review, 18 Nov, #11).

@@ -46,8 +46,8 @@ This page is the first-draft write-up: the product scope (§1), the AI plan and 
 
 | # | AI feature | In → out | Exists today? |
 | --- | --- | --- | --- |
-| 1 | **Build the room** | About 60 frames from the room video → a coloured 3D point for every pixel, and where the camera was for every frame | Coded and tested with a stand-in model; first real run 18 Nov (see Evidence) |
-| 2 | **Place a photo** | A photo plus frames of the room → where the camera stood, or "can't place, ask the user" | Coded and tested with a stand-in model; first real run 18 Nov |
+| 1 | **Build the room** | About 60 frames from the room video → a coloured 3D point for every pixel, and where the camera was for every frame | Coded and tested with a stand-in model. Not yet run on a real video; the first real run is planned for 18 Nov (see Evidence) |
+| 2 | **Place a photo** | A photo plus frames of the room → where the camera stood, or "can't place, ask the user" | Coded and tested with a stand-in model. Not yet run on real photos; planned with the first real run |
 | 3 | **Refine a hand-placed photo** | A photo plus the spot the user tapped → the exact spot | Planned |
 | 4 | **Find a room's photos** | A large batch of photos → the ones taken in this room (date, GPS, and how much the photo looks like the room) | Planned |
 | 5 | **Line up two scans** | A new scan and an older one → both in the same coordinates (needed for versions) | Planned |
@@ -130,11 +130,11 @@ The four limits are starting guesses, to be tuned on real photos.
 
 **Before the first real run:**
 
-- 91 tests of the AI code pass (Python 3.14, 18 Nov). They use a stand-in model with known answers, so they show the steps around the model behave; they say nothing about the real model's quality.
+- 96 tests of the AI code pass (Python 3.14, 18 Nov). They use a stand-in model with known answers, so they show the steps around the model behave; they say nothing about the real model's quality.
 - Full rehearsals of the notebook on the laptop with the stand-in model, the second after the fix below: every cell ran each time. A separate rehearsal with an unreadable video stopped with a plain message and still saved `run.json`.
 - A review of the notebook against MapAnything's source found one real problem (bf16 chosen on a T4) and fixed it before the run.
 
-**The first real run (18 Nov):** _to be filled in from the run's `run.json`, `room.json` and `placements.json`, and the room measured with a tape (step C8)._
+**The first real run (planned for 18 Nov): not done yet.** _To be filled in from the run's `run.json`, `room.json` and `placements.json`, and the room measured with a tape (step C8). If the run fails, its failure and error are reported here instead._
 
 ---
 
@@ -144,10 +144,10 @@ The four limits are starting guesses, to be tuned on real photos.
 
 | Task | Current status (18 Nov) | Responsible member | Expected completion |
 | --- | --- | --- | --- |
-| **Django Core Features** | Done: sign-up and login; places (create, rename, delete); room video upload; photos (many at once, captions, dates, delete); a 3D room page for each built scan, with photos as dots. Each user sees only their own. 229 tests pass. Remaining: placing a photo by hand on the 3D page, pages to switch between versions | Revaant Daga (solo) | 2 Dec |
+| **Django Core Features** | Done: sign-up and login; places (create, rename, delete); room video upload; photos (many at once, captions, dates, delete); a 3D room page for each built scan, with photos as dots. Each user sees only their own. 240 tests pass. Remaining: placing a photo by hand on the 3D page, pages to switch between versions | Revaant Daga (solo) | 2 Dec |
 | **Database and APIs** | Done: four models with relationships (a user's Place has Scans and Memories; a Pin joins a Memory to a Scan at x, y, z), migrations, admin; a command that imports a built room and its facts. Remaining: a JSON API (a room with its pins; move a pin), search and a timeline of a place's photos | Revaant Daga (solo) | 1 Dec |
-| **AI Integration** | Done: the room-building and photo-placing code, run in a Colab notebook; first real run 18 Nov. Remaining: Django starts the GPU job; placement with highlighted photos and hand placement; refining a hand-placed photo; lining up two scans | Revaant Daga (solo) | 5 Dec |
-| **Evaluation and Testing** | Done: 229 Django tests and 91 AI tests; the first real run is the first evaluation row. Remaining: five realistic tests in a table, two real failures, one improvement with before and after | Revaant Daga (solo) | 5 Dec |
+| **AI Integration** | Done: the room-building and photo-placing code, in a Colab notebook, tested with a stand-in model; a command that brings a built room into the app. Not yet run on a GPU (the first real run is planned for 18 Nov). Remaining: Django starts the GPU job; placement with highlighted photos and hand placement; refining a hand-placed photo; lining up two scans | Revaant Daga (solo) | 5 Dec |
+| **Evaluation and Testing** | Done: 240 Django tests and 96 AI tests; a code review of the whole first draft (18 Nov: 15 findings, 12 fixed with a test each, 3 deferred); the first real run will be the first evaluation row. Remaining: five realistic tests in a table, two real failures, one improvement with before and after | Revaant Daga (solo) | 5 Dec |
 | **Deployment** | Not started. Runs locally (SQLite, files on disk). Remaining: a live host, a GPU service, two options compared on cost, what changes at 10,000 daily users, security | Revaant Daga (solo) | 6 Dec |
 | **Documentation** | Done: `README.md`, this page, a system map, the AI README, a filming guide. Remaining: `README_AI.md` and the three-minute video | Revaant Daga (solo) | 8 Dec |
 

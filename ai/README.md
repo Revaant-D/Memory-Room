@@ -19,7 +19,7 @@ ai/
 │  ├─ session.py            the notebook's helpers: run record, retries, photo copies, pictures
 │  └─ fake.py               a stand-in model and a made-up room, for tests and rehearsals
 ├─ roomgeom/                the geometry, numpy only: level the room, fit, the pin-or-ask check, point files
-├─ tests/                   83 tests, all with the stand-in model
+├─ tests/                   96 tests, all with the stand-in model
 └─ requirements.txt         what the tests need on a laptop
 ```
 
@@ -64,7 +64,7 @@ To rehearse the whole notebook with the stand-in model (every cell, a made-up ro
 
 It ends with `REHEARSAL PASSED` or `REHEARSAL FAILED`. It needs IPython, which is in `requirements.txt` for this reason.
 
-91 tests passed on 17 Nov 2026 (Python 3.14.3 and the versions in `requirements.txt`). They prove the steps around the model behave given model output of known accuracy. They prove nothing about the real model.
+96 tests passed on 18 Nov 2026 (Python 3.14.3 and the versions in `requirements.txt`). They prove the steps around the model behave given model output of known accuracy. They prove nothing about the real model.
 
 ## How it was checked on 17 Nov
 
@@ -88,6 +88,14 @@ It ends with `REHEARSAL PASSED` or `REHEARSAL FAILED`. It needs IPython, which i
 - `model.py`, evening of 17 Nov: the number format is chosen from the GPU generation (`precision`, default `"auto"`) and recorded in the output; a pass whose camera positions, or more than 1% of whose points, are not real numbers stops with a sentence saying how to switch to fp32; the few invalid points of an otherwise good pass are dropped and counted.
 - The notebook, evening of 17 Nov: a `PRECISION` setting; a check right after the install that OpenCV still loads; the GPU's compute capability and the precision used go into `run.json`; the frames sheet now says to stop if the frames are sideways; the first cell points to `docs/filming-guide.md`.
 - `__init__.py`, `__main__.py`: paths and help text for this folder; the command line's `build` keeps the per-frame detail.
+
+## Changes after the code review of 18 Nov
+
+- `roompipe/place.py`: a model pass that fails is no longer recorded as "ask the person" for every photo in the batch. It stops placement, and the notebook writes the failure into `run.json`.
+- `roomgeom/place.py`: the "inside the room" check looks at the spot that is pinned (the middle of the two tries), not at the first try.
+- The notebook: a run starts with an empty room folder, and the save never merges into, or writes over, an earlier Drive folder of the same name (a new name gets the time added).
+- `rehearse_notebook.py`: refuses a work folder that holds anything except an earlier rehearsal, because it empties that folder.
+- The code zip was re-packed after these changes and the notebook rehearsed again (passed).
 
 ## Decisions still open that touch this folder
 

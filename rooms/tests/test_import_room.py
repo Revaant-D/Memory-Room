@@ -59,6 +59,10 @@ def room_json(**changes):
     return room
 
 
+# What a stand-in run writes in room.json (ai/roompipe/fake.py).
+STAND_IN_ROOM = room_json(model_info={"model_id": "stand-in (made-up room, not a reconstruction)"})
+
+
 def run_json(**changes):
     run = {
         "run_name": "room-2026-11-18",
@@ -187,6 +191,44 @@ class ImportRoomTests(TempMediaTestCase):
         self.assertIn("no room.json", message)
         self.assertIn("the room could not be levelled: no floor", message)
 
+    def test_failed_run_beside_an_old_room_refused(self):
+        # Review, 18 Nov: a rerun that failed early can leave the previous run's
+        # room.json and points.ply beside its own run.json.
+        run = run_json(finished=False, stopped_because="only 12 frames could be read from the video")
+        message = self.refused(self.scan.pk, self.write_room(run=run))
+        self.assertIn("only 12 frames could be read from the video", message)
+
+    def test_files_from_different_runs_refused(self):
+        # A stand-in room.json beside a real run.json must not pass as a real room.
+        room = room_json(model_info={"model_id": "stand-in (made-up room, not a reconstruction)"})
+        message = self.refused(self.scan.pk, self.write_room(room=room, run=run_json()))
+        self.assertIn("disagree", message)
+
+    def damaged_zip(self, points):
+        """A zip of a good room whose points.ply has one byte flipped near its end."""
+        ply = ply_bytes(points)
+        folder = self.write_room(room=room_json(n_points=len(points)), ply=ply)
+        path = self.work / "damaged.zip"
+        with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as archive:
+            for file in folder.iterdir():
+                archive.write(file, file.name)
+        data = bytearray(path.read_bytes())
+        data[data.index(ply[-15:])] ^= 0xFF  # the last point, stored as it is
+        path.write_bytes(bytes(data))
+        return path
+
+    def test_damaged_zip_refused(self):
+        message = self.refused(self.scan.pk, self.damaged_zip(POINTS))
+        self.assertIn("damaged", message)
+
+    def test_damaged_zip_found_while_copying_leaves_no_file(self):
+        # Review, 18 Nov: past the first 4 KB the damage only shows during the copy.
+        many = [(i * 0.01, 0.5, 1.0, 10, 20, 30) for i in range(400)]  # 6,000 bytes of points
+        message = self.refused(self.scan.pk, self.damaged_zip(many))
+        self.assertIn("damaged", message)
+        scans = Path(self.scan.video.path).parent
+        self.assertEqual([p.name for p in scans.iterdir() if p.name.endswith("-points.ply")], [])
+
     def test_unknown_version(self):
         message = self.refused(self.scan.pk, self.write_room(room=room_json(version=2)))
         self.assertIn("version 2", message)
@@ -227,7 +269,7 @@ class ImportRoomTests(TempMediaTestCase):
 
     def test_made_up_room_refused(self):
         run = run_json(stand_in=True, model_id=STAND_IN, weights_revision=None, gpu=None)
-        message = self.refused(self.scan.pk, self.write_room(run=run))
+        message = self.refused(self.scan.pk, self.write_room(room=STAND_IN_ROOM, run=run))
         self.assertIn("--made-up", message)
 
     def test_made_up_room_seen_in_room_json(self):
@@ -238,7 +280,7 @@ class ImportRoomTests(TempMediaTestCase):
 
     def test_made_up_room_with_flag(self):
         run = run_json(stand_in=True, model_id=STAND_IN, weights_revision=None, gpu=None)
-        out = self.run_command(self.scan.pk, self.write_room(run=run), "--made-up")
+        out = self.run_command(self.scan.pk, self.write_room(room=STAND_IN_ROOM, run=run), "--made-up")
         self.assert_imported()
         self.assertIs(self.scan.room_info["made_up"], True)
         self.assertIn("MADE-UP ROOM", out)

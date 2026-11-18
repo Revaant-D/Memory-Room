@@ -79,7 +79,11 @@
         colors: points.colors,
         box: data.box || boxOf(points.positions),
         pins: data.pins,
-        onPinSelect: show,
+        // Enlarge the tapped dot, so it is clear which one the photo below belongs to.
+        onPinSelect(pin) {
+          viewer.selectPin(pin ? pin.id : null);
+          show(pin);
+        },
       });
 
       for (const [id, view] of [["view-inside", "inside"], ["view-above", "above"]]) {

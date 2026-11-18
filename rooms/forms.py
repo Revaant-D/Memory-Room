@@ -1,12 +1,14 @@
 """The forms of the rooms app. A form checks what a person typed before it is saved."""
 
+import os
+
 from django import forms
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from rooms.models import Memory, Place, Scan
-from rooms.validators import size_words, validate_photo, validate_video
+from rooms.validators import PHOTO_ENDINGS, size_words, validate_photo, validate_video
 
 
 class PlaceForm(forms.ModelForm):
@@ -127,15 +129,19 @@ class MultipleImageField(forms.FileField):
         if len(files) > most:
             raise ValidationError(f"Upload at most {most} photos at a time.")
 
-        problems = []
+        problems, kinds = [], []
         for file in files:
             try:
                 super().clean(file, initial)  # Django's own checks: not empty, has a name
-                validate_photo(file)  # ours: size, and really a JPEG, PNG or WebP
+                kinds.append(validate_photo(file))  # ours: size, and really a JPEG, PNG or WebP
             except ValidationError as error:
                 problems.extend(f"{file.name}: {message}" for message in error.messages)
         if problems:
             raise ValidationError(problems)
+        # Give each file the ending of what is inside it, so a JPEG sent as
+        # "x.html" becomes "x.jpg" and is stored, and later served, as a JPEG.
+        for file, kind in zip(files, kinds):
+            file.name = os.path.splitext(file.name)[0] + PHOTO_ENDINGS[kind]
         return files
 
 
