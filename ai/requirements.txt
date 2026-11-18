@@ -1,0 +1,8 @@
+# For running the AI tests on a laptop (python -m unittest discover -s tests, from ai/).
+# The Django app does not need any of these. Colab already has them; the
+# notebook installs MapAnything itself.
+numpy==2.5.5
+opencv-python-headless==5.1.0.95
+pillow==13.0.0
+matplotlib==3.11.2
+ipython==9.18.1  # only for rehearse_notebook.py
