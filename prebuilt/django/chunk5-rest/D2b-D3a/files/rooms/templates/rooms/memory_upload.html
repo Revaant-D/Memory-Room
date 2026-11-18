@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Add a photo · {{ place.name }} · Memory Room{% endblock %}
+
+{% block content %}
+  <p><a href="{{ place.get_absolute_url }}">← {{ place.name }}</a></p>
+  <h1>Add a photo</h1>
+  <p class="meta">Pick one photo you took in this room. The caption and the date can be changed later.</p>
+  <form class="form" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% include "includes/form_fields.html" %}
+    <p class="actions">
+      <button class="button" type="submit">Upload photo</button>
+      <a class="button button--quiet" href="{{ place.get_absolute_url }}">Cancel</a>
+    </p>
+  </form>
+{% endblock %}

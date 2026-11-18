@@ -16,7 +16,7 @@ This plan is cut into six chunks. Each chunk is one sitting with one Claude sess
 
 | Chunk | What exists when it is done | Rough time | Status |
 | --- | --- | --- | --- |
-| 1. Skeleton and accounts | The project runs; sign-up, login, logout work | 60–75 min | ☐ |
+| 1. Skeleton and accounts | The project runs; sign-up, login, logout work | 60–75 min | Built, recorded and committed (`4ed4bda`) 16 Nov. Still to do: the builder's walk-through |
 | 2. The four models | Place, Scan, Memory, Pin with their rules, visible in the admin | 60 min | ☐ |
 | 3. Places pages | Create, list, open, rename, delete a place; other users get a 404 | 60 min | ☐ |
 | 4. Room video upload | Upload and delete a room video on a place | 45 min | ☐ |
@@ -44,7 +44,8 @@ Times are Claude's estimates and include the walk-through.
 ## Global constraints
 
 - **Commits:** commit only when the builder asks (`CLAUDE.md`). At the start of a session, ask once whether you may commit at each task's commit point. Never push.
-- **What goes into git:** add files by path. Do **not** add `CLAUDE.md` or anything under `docs/` until the builder has decided whether they are pushed (open question in `CLAUDE.md`). Never add `.env` files, keys, `media/`, `db.sqlite3`, `.secret_key` or model weights.
+- **What goes into git:** add files by path. The builder made the repository themselves on 16 Nov, on branch `master`, and committed `docs/` and `.idea/`; keep that branch name and leave those tracked. `CLAUDE.md` is never committed (the builder's rule; see Rules in `CLAUDE.md` for the check to run before each commit). Commit messages carry no co-author line and no mention of the tool that wrote the code; the author is the builder. Whether `docs/` is *pushed* is still the builder's open question. Never add `.env` files, keys, `media/`, `db.sqlite3`, `.secret_key` or model weights.
+- **Forms are drawn one way:** inside each `<form>`, `{% include "includes/form_fields.html" %}` draws the fields. Do not hand-write field markup per page.
 - **Real results only:** never write that a test passed or a page works without having run it in this session.
 - **Storage:** SQLite and local disk only.
 - **Python:** every command uses the project's own interpreter, `.venv\Scripts\python.exe`. Do not rely on `python` on the PATH; this machine has four of them. Do not activate the environment (PowerShell may block the activate script); call the interpreter by path.
@@ -116,6 +117,8 @@ Git-ignored and created at run time: `.venv/`, `db.sqlite3`, `media/`, `.secret_
 
 ## Decide
 
+**Decided 16 Nov 2026: the builder chose b.** Do not ask again.
+
 **Builder's decision D1: which user model.** This is the one choice in the whole plan that is hard to change later, because it must be made before the first database migration.
 
 | | Option | Trade-off |
@@ -146,7 +149,7 @@ Logging in with an email address is not offered for the first draft; if the buil
 **Interfaces:**
 - Produces: `config.secret.load_secret_key(base_dir: Path) -> str`; URL name `home` at `/`; template `base.html` with blocks `title` and `content`; settings `MEDIA_ROOT`, `LOGIN_URL = "login"`, `LOGIN_REDIRECT_URL = "home"`, `LOGOUT_REDIRECT_URL = "home"`.
 
-- [ ] **Step 1: Create the environment and the project**
+- [x] **Step 1: Create the environment and the project**
 
 ```powershell
 py -3.14 -m venv .venv
@@ -161,7 +164,7 @@ git init -b main
 
 Expected: `manage.py` and `config/settings.py` exist. Do **not** run `migrate` yet; the user model in Task 2 must exist first. Check that `requirements.txt` is plain UTF-8 text (PowerShell's `>` can write UTF-16; if it did, rewrite the file with the Write tool).
 
-- [ ] **Step 2: Write `.gitignore`**
+- [x] **Step 2: Write `.gitignore`**
 
 ```
 .venv/
@@ -182,7 +185,7 @@ staticfiles/
 *.ckpt
 ```
 
-- [ ] **Step 3: Write the failing tests** in `config/tests.py` and `rooms/tests/test_home.py`
+- [x] **Step 3: Write the failing tests** in `config/tests.py` and `rooms/tests/test_home.py`
 
 ```python
 # config/tests.py  (SimpleTestCase; uses a temporary directory, no database)
@@ -194,12 +197,12 @@ test_reuses_key_file         # called twice on the same dir -> same key both tim
 test_home_shows_landing      # GET "/" -> 200, contains "Memory Room", "Sign up" and "Log in"
 ```
 
-- [ ] **Step 4: Run them and see them fail**
+- [x] **Step 4: Run them and see them fail**
 
 Run: `.venv\Scripts\python.exe manage.py test`
 Expected: errors, because `config.secret` does not exist and `/` has no page.
 
-- [ ] **Step 5: Implement**
+- [x] **Step 5: Implement**
 
 - `config/secret.py`: `load_secret_key(base_dir: Path) -> str`. Order: the `DJANGO_SECRET_KEY` environment variable; else the text of `base_dir / ".secret_key"`; else make one with `django.core.management.utils.get_random_secret_key()`, write it to that file and return it.
 - `config/settings.py`:
@@ -218,7 +221,7 @@ Expected: errors, because `config.secret` does not exist and `/` has no page.
 - `rooms/templates/rooms/home.html`: one sentence saying what the product is ("Film a room once. It becomes a 3D room you can turn, with your photos pinned where you took them.") and links to sign up and log in. The 3D part is not built: the page must not say it works.
 - `static/css/site.css`: readable on a phone, content column at most 720px wide, system font. Keep it under about 150 lines.
 
-- [ ] **Step 6: Run the tests and see them pass**
+- [x] **Step 6: Run the tests and see them pass**
 
 Run: `.venv\Scripts\python.exe manage.py test`
 Expected: 4 tests, OK. (The `Sign up` and `Log in` links can be plain `/accounts/...` paths until Task 2 names them.)
@@ -240,7 +243,7 @@ git commit -m "Project skeleton: config project, accounts and rooms apps, home p
 **Interfaces:**
 - Produces: `accounts.User` (same fields as Django's user); URL names `signup` (`/accounts/signup/`), `login` (`/accounts/login/`), `logout` (`/accounts/logout/`); `accounts.forms.SignupForm`.
 
-- [ ] **Step 1: Write the failing tests** in `accounts/tests/test_accounts.py`
+- [x] **Step 1: Write the failing tests** in `accounts/tests/test_accounts.py`
 
 Use the password `pass-12345-word` throughout.
 
@@ -262,16 +265,16 @@ test_header_logged_in            # after login, GET "/" with follow=True contain
 test_logged_in_user_skips_signup_and_login   # GET either page while logged in -> 302 to "/"
 ```
 
-- [ ] **Step 2: Run and see them fail**
+- [x] **Step 2: Run and see them fail**
 
 Run: `.venv\Scripts\python.exe manage.py test accounts`
 Expected: failures; the addresses do not exist.
 
-- [ ] **Step 3: Add the user model** (skip if D1 = a)
+- [x] **Step 3: Add the user model** (skip if D1 = a)
 
 `accounts/models.py`: `class User(AbstractUser): pass`. `config/settings.py`: `AUTH_USER_MODEL = "accounts.User"`. `accounts/admin.py`: register it with Django's `UserAdmin`.
 
-- [ ] **Step 4: Implement the pages**
+- [x] **Step 4: Implement the pages**
 
 - `accounts/forms.py`: `SignupForm(UserCreationForm)` with `Meta.model = get_user_model()` and `fields = ("username",)`.
 - `accounts/views.py`: `signup(request)`. GET shows the form. A valid POST saves the user, calls `login(request, user)`, adds the message "Welcome, ana." and redirects to `home`. A logged-in visitor is redirected to `home`.
@@ -279,7 +282,7 @@ Expected: failures; the addresses do not exist.
 - Templates extend `base.html` and show field errors next to each field.
 - `templates/base.html` header: logged in → the username and a "Log out" button inside a small POST form; logged out → "Log in" and "Sign up" links, using `{% url %}`.
 
-- [ ] **Step 5: Make the database**
+- [x] **Step 5: Make the database**
 
 ```powershell
 .venv\Scripts\python.exe manage.py makemigrations accounts
@@ -288,7 +291,7 @@ Expected: failures; the addresses do not exist.
 
 Expected: `accounts/migrations/0001_initial.py` is created and all migrations apply.
 
-- [ ] **Step 6: Run all tests and see them pass**
+- [x] **Step 6: Run all tests and see them pass**
 
 Run: `.venv\Scripts\python.exe manage.py test`
 Expected: 16 tests, OK (15 if D1 = a).
@@ -313,6 +316,24 @@ git commit -m "Accounts: own user model, sign-up, login, logout"
 ## Record (chunk 1)
 
 Create `docs/system-map.md`. Give it a short introduction (what the app is, how to run it and its tests) and then one section per piece, each with the same five headings: **What it does · Where the code is · How one request flows · Decisions and why (who decided, when) · How to change it**. Write the sections "Project and settings" and "Accounts". Record D1 as the builder's decision and every "Claude's call" above as Claude's.
+
+## As built (chunk 1, 16 Nov 2026)
+
+Chunk 1 ended with **50 tests**, all passing, against the 16 this plan listed. The later counts in this plan have been raised to match. Where the build departs from the text above, the build is right and this list says why:
+
+- **Git.** The repository already existed (the builder made it at 13:41 on 16 Nov, branch `master`, with `docs/` and `.idea/` committed). `git init -b main` did nothing. The branch stays `master`, and `.idea/` was left out of `.gitignore` because the builder tracks it.
+- **Secret key.** Made with Python's `secrets.token_urlsafe(50)` instead of Django's `get_random_secret_key()`, so `config/secret.py` needs nothing from Django's management code while settings load. Nine tests were added beyond the three listed: a blank environment variable, a blank key file, stray whitespace, a byte-order mark, a UTF-16 file, an unwritable folder.
+- **`DJANGO_ALLOWED_HOSTS`** was added to the settings. Without it, `DJANGO_DEBUG=0` refuses every request.
+- **`MEDIA_URL = "/media/"`** was set so file links in the admin are well-formed. Nothing serves that address.
+- **`templates/includes/form_fields.html`** draws every form's fields. Later chunks use it.
+- **`templates/404.html` and `templates/500.html`** exist. Chunk 3 does not need to make a not-found page.
+- **Tests use a fast password hasher** (`settings.py`, only when the command is `test`). With real hashing the suite took 15 seconds.
+- **The header tests** read only the `<header>` part of the page, because the home page body also links to sign-up and login.
+- **Extra account tests:** sign-up cannot create a staff account; usernames differing only in case are refused; a login `next` pointing at another site is ignored; the username in the header is escaped.
+
+Checked by hand against the running server on 16 Nov: sign-up, login and logout through real requests; a POST without the security token gets a 403; logout by GET gets a 405; the eight ways a sign-up can be refused each show their message; an accented username is accepted; with debug off, an unknown address shows our not-found page and a wrong host name gets a 400.
+
+Committed as one commit, `4ed4bda` "Chunk 1: project skeleton and accounts", instead of the two commit points above, because both tasks were finished before the builder was asked. Not done: the walk-through (it needs the builder).
 
 ---
 
@@ -526,7 +547,7 @@ class Pin(models.Model):
 .venv\Scripts\python.exe manage.py test
 ```
 
-Expected: 44 tests, OK (16 from chunk 1, 28 model tests).
+Expected: 78 tests, OK (50 from chunk 1, 28 model tests).
 
 - [ ] **Step 5: Commit point** — `git add rooms` · `git commit -m "Pin model: one per memory per scan, same place, real coordinates"`
 
@@ -615,7 +636,7 @@ Photos
 
 (The Rename and Delete links arrive in Task 7; the buttons in each section arrive in chunks 4 and 5.)
 
-- [ ] **Step 4: Run all tests and see them pass** — expected: 54 tests, OK.
+- [ ] **Step 4: Run all tests and see them pass** — expected: 88 tests, OK.
 
 - [ ] **Step 5: Commit point** — `git add rooms` · `git commit -m "Places: list, create, open, owner-only"`
 
@@ -647,7 +668,7 @@ test_edit_delete_need_login     # logged out -> 302 to login
 
 - [ ] **Step 3: Implement** views `place_edit` (reuses `place_form.html`) and `place_delete` (GET shows the confirmation, POST deletes). Add the Rename and Delete links to `place_detail.html`.
 
-- [ ] **Step 4: Run all tests and see them pass** — expected: 62 tests, OK.
+- [ ] **Step 4: Run all tests and see them pass** — expected: 96 tests, OK.
 
 - [ ] **Step 5: Commit point** — `git add rooms` · `git commit -m "Places: rename and delete with confirmation"`
 
@@ -714,7 +735,7 @@ test_date_defaults_to_today    # the unbound form's initial taken_on is timezone
 
 `validate_video(file)` checks, in this order: the ending is `.mp4` or `.mov` (any case); `file.size <= settings.MAX_VIDEO_BYTES` (message: "This video is too large. The limit is 500 MB.", with the number taken from the setting); bytes 4 to 8 of the file are `b"ftyp"`. It must leave the file rewound to the start. `ScanForm` declares `video` itself as `forms.FileField(validators=[validate_video])` rather than taking the field the model would generate: the generated one refuses any file whose original name is longer than 100 characters, and the original name is never stored. The input carries `accept="video/mp4,video/quicktime"`, and `taken_on` renders as a date input.
 
-- [ ] **Step 4: Run and see them pass** — expected: 73 tests, OK.
+- [ ] **Step 4: Run and see them pass** — expected: 107 tests, OK.
 
 - [ ] **Step 5: Commit point** — `git add rooms config` · `git commit -m "Video checks and scan form"`
 
@@ -758,7 +779,7 @@ Room scans                                  [Add a room video]
   Uploaded videos wait here. Building the 3D room is not part of the app yet.
 ```
 
-- [ ] **Step 4: Run all tests and see them pass** — expected: 83 tests, OK.
+- [ ] **Step 4: Run all tests and see them pass** — expected: 117 tests, OK.
 
 - [ ] **Step 5: Commit point** — `git add rooms` · `git commit -m "Scans: upload and delete a room video"`
 
@@ -855,7 +876,7 @@ test_date_can_be_cleared           # MemoryForm taken_on "" -> valid, None
 - `validate_photo`: size against `MAX_PHOTO_BYTES` ("This photo is too large. The limit is 20 MB."), then the format Pillow detected is one of JPEG, PNG, WEBP.
 - `MultipleImageField`: follow the "Uploading multiple files" pattern in the Django 5.2 documentation (a `ClearableFileInput` subclass with `allow_multiple_selected = True`, and a field whose `clean` accepts a list). Run Django's `forms.ImageField` check and then `validate_photo` on each file, collect every failure as `"<file name>: <message>"`, and raise them together. Enforce `MAX_PHOTOS_PER_UPLOAD`. The input carries `accept="image/jpeg,image/png,image/webp"`.
 
-- [ ] **Step 4: Run and see them pass** — expected: 100 tests, OK.
+- [ ] **Step 4: Run and see them pass** — expected: 134 tests, OK.
 
 - [ ] **Step 5: Commit point** — `git add rooms config` · `git commit -m "Photo checks, date reading, multi-photo form"`
 
@@ -906,7 +927,7 @@ Photos (3)                                      [Add photos]
   9 May 2026    no date        1 Nov 2026
 ```
 
-- [ ] **Step 4: Run all tests and see them pass** — expected: 113 tests, OK.
+- [ ] **Step 4: Run all tests and see them pass** — expected: 147 tests, OK.
 
 - [ ] **Step 5: Commit point** — `git add rooms static` · `git commit -m "Memories: upload many photos, private photo serving, photo grid"`
 
@@ -939,7 +960,7 @@ test_edit_delete_need_login
 
 - [ ] **Step 3: Implement** views `memory_edit` (the photo above the form) and `memory_delete`, and link each grid photo to its edit page.
 
-- [ ] **Step 4: Run all tests and see them pass** — expected: 122 tests, OK.
+- [ ] **Step 4: Run all tests and see them pass** — expected: 156 tests, OK.
 
 - [ ] **Step 5: Commit point** — `git add rooms` · `git commit -m "Memories: edit caption and date, delete"`
 
@@ -1003,7 +1024,7 @@ py -3.14 -m venv .venv
 .venv\Scripts\python.exe manage.py check
 ```
 
-Expected: every migration applies, 122 tests pass (adjust for D1, D2, D3), `check` reports no issues, and a `.secret_key` file appears in the clean copy. If anything fails, the README or the repository is wrong: fix it, commit, and repeat from a new clean copy.
+Expected: every migration applies, 156 tests pass (adjust for D2, D3), `check` reports no issues, and a `.secret_key` file appears in the clean copy. If anything fails, the README or the repository is wrong: fix it, commit, and repeat from a new clean copy.
 
 - [ ] **Step 3: Check what is in git.** In the real project: `git ls-files`. Expected: no `.venv`, `media/`, `db.sqlite3`, `.secret_key`, `.env`, `.idea/`, and (until the builder decides) no `docs/` or `CLAUDE.md`.
 

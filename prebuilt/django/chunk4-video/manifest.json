@@ -1,0 +1,48 @@
+{
+  "files": {
+    "config/settings.py": {
+      "action": "replace",
+      "base": "06941066b87927c7d428d4fd6b322b3ac68bed4bc9ae2359abc37945ad38bd54"
+    },
+    "rooms/access.py": {
+      "action": "replace",
+      "base": "38553c9e940b4bc4b2947e2bb7cc63d0046d8a153becd5dd9ae1db59c23619f4"
+    },
+    "rooms/forms.py": {
+      "action": "replace",
+      "base": "69fe3290a17a4a7fbc4f33eb71cdf26c952e4417c7f08e94e948139aa543a851"
+    },
+    "rooms/templates/rooms/home.html": {
+      "action": "replace",
+      "base": "f8196d50261621e63cfdb81f3ce07199f8b75497b0bccf5d487a85cf8e24c31c"
+    },
+    "rooms/templates/rooms/place_detail.html": {
+      "action": "replace",
+      "base": "5837933235a92e8a0dc39d5a0480c570095d6e8c5b33630ea8866a939f716b3d"
+    },
+    "rooms/templates/rooms/scan_confirm_delete.html": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/templates/rooms/scan_form.html": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/tests/test_scans.py": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/urls.py": {
+      "action": "replace",
+      "base": "9912e3cecbc2183ab74935886087701ee654761487f613c6965e12ce635a5b62"
+    },
+    "rooms/validators.py": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/views.py": {
+      "action": "replace",
+      "base": "361fbce6c48d03fef123887296288d441af0a8b3915c6b3656cc48cf333aaaf3"
+    }
+  }
+}

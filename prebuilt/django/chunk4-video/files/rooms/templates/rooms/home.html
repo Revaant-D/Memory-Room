@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="hero">
+    <h1>Keep the room, not only the photos.</h1>
+    <p class="lead">
+      Memory Room is for a place you are about to leave. Film the room once on
+      your phone and add the photos you took there.
+    </p>
+    <p class="note">
+      This is an early version. Today you can make an account, keep a list of
+      your places and add a room video to each. Photos come next. The 3D room
+      is not built yet.
+    </p>
+    {% if user.is_authenticated %}
+      <p>You are logged in as <strong>{{ user.get_username }}</strong>.</p>
+    {% else %}
+      <p class="actions">
+        <a class="button" href="{% url 'signup' %}">Sign up</a>
+        <a class="button button--quiet" href="{% url 'login' %}">Log in</a>
+      </p>
+    {% endif %}
+  </section>
+{% endblock %}

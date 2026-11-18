@@ -1,0 +1,44 @@
+{
+  "files": {
+    "rooms/admin.py": {
+      "action": "replace",
+      "base": "b2e328e31f08dc907100505521d13ee6a9ea67a240655d051120011ce49cfaf8"
+    },
+    "rooms/apps.py": {
+      "action": "replace",
+      "base": "c773fb7ba00c8957779533ecf88c09216c9d7d044e56afff1218bd2b38e2d47c"
+    },
+    "rooms/migrations/0001_place.py": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/migrations/0002_scan_memory.py": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/migrations/0003_pin.py": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/models.py": {
+      "action": "replace",
+      "base": "563734a765db00f804e87c9317abe597df00e1e0e103902f690aac738910f404"
+    },
+    "rooms/signals.py": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/slugs.py": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/tests/test_models.py": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/tests/utils.py": {
+      "action": "add",
+      "base": null
+    }
+  }
+}

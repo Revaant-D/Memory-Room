@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}{{ place.name }} · Memory Room{% endblock %}
+
+{% block content %}
+  <p><a href="{% url 'place_list' %}">← Your places</a></p>
+
+  <div class="page-head">
+    <h1>{{ place.name }}</h1>
+    <span class="page-head__links">
+      <a href="{% url 'place_edit' place.slug %}">Rename</a>
+      <a class="danger-link" href="{% url 'place_delete' place.slug %}">Delete</a>
+    </span>
+  </div>
+  <p class="meta">Created {{ place.created|date:"j M Y" }}</p>
+
+  <section class="section">
+    <div class="page-head">
+      <h2>Room scans</h2>
+      <a class="button button--small" href="{% url 'scan_create' place.slug %}">Add a room video</a>
+    </div>
+    {% if scans %}
+      <ul class="card-list">
+        {% for scan in scans %}
+          <li>
+            <span>Filmed {{ scan.taken_on|date:"j M Y" }} · {{ scan.get_status_display }}</span>
+            <a class="danger-link" href="{% url 'scan_delete' scan.pk %}">Delete</a>
+          </li>
+        {% endfor %}
+      </ul>
+      <p class="meta">Uploaded videos wait here. Building the 3D room is not part of the app yet.</p>
+    {% else %}
+      <p class="empty">No room video yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="section">
+    <div class="page-head">
+      <h2>Photos</h2>
+    </div>
+    <p class="empty">No photos yet.</p>
+  </section>
+{% endblock %}

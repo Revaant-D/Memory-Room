@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Room viewer demo · Memory Room</title>
+  <link rel="icon" href="data:,">
+  <!--
+    A standalone page for trying the viewer. It is not part of the Django app.
+    It must be opened through a web server, not by double-clicking the file
+    (browsers do not let a page opened from disk load other files):
+
+        cd prebuilt\viewer
+        ..\..\.venv\Scripts\python.exe -m http.server 8765
+        then open http://127.0.0.1:8765/demo.html
+
+    Add ?format=bin to the address to load points.bin where it would load points.ply.
+  -->
+  <style>
+    :root { --ink: #1d1b19; --ink-soft: #5f5a54; --paper: #faf8f5; --card: #fff; --line: #e2ddd5; --accent: #2f5d50; --warn-bg: #fdf1d6; }
+    @media (prefers-color-scheme: dark) {
+      :root { --ink: #eeeae4; --ink-soft: #a9a39a; --paper: #171614; --card: #211f1c; --line: #37332e; --accent: #7fbfa9; --warn-bg: #3a3118; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font: 1rem/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 900px; margin: 0 auto; padding: 16px; }
+    h1 { font-size: 1.4rem; margin: 0 0 8px; }
+    .warn { background: var(--warn-bg); border-radius: 8px; padding: 10px 14px; margin: 0 0 12px; }
+    #room { width: 100%; height: min(62vh, 560px); border-radius: 8px; overflow: hidden; background: #15151a; }
+    .bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+    button { font: inherit; padding: 8px 14px; min-height: 44px; border-radius: 8px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
+    button[aria-pressed="true"] { background: var(--accent); color: var(--paper); }
+    #status { color: var(--ink-soft); min-height: 1.5em; margin: 0 0 8px; }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; cursor: pointer; }
+    li.chosen { border-color: var(--accent); outline: 2px solid var(--accent); }
+    .meta { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+    .dot { display: inline-block; width: 0.7em; height: 0.7em; border-radius: 50%; margin-right: 6px; }
+  </style>
+  <!-- Tells the browser where "three" and its add-ons are. -->
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/" } }
+  </script>
+</head>
+<body>
+  <main>
+    <h1>Room viewer demo</h1>
+    <p class="warn">
+      <strong>This room is made up.</strong> It was drawn by a script, not built from a video,
+      and its pins were "placed" by a stand-in for the model. It shows what the viewer does,
+      and nothing about how a real room will look.
+    </p>
+    <div id="room" aria-label="A 3D room made of coloured points. Drag to turn it."></div>
+    <div class="bar">
+      <button id="inside" aria-pressed="true">Stand inside</button>
+      <button id="above" aria-pressed="false">Look from above</button>
+      <button id="place" aria-pressed="false">Place a pin</button>
+    </div>
+    <p id="status">Loading the room…</p>
+    <ul id="pins"></ul>
+  </main>
+
+  <script type="module">
+    import { loadPoints } from "./loaders.js";
+    import { createRoomViewer } from "./roomviewer.js";
+
+    const status = document.querySelector("#status");
+    const list = document.querySelector("#pins");
+    const format = new URLSearchParams(location.search).get("format") === "bin" ? "bin" : "ply";
+
+    try {
+      const [room, placements, points] = await Promise.all([
+        fetch("demo/room.json").then((r) => r.json()),
+        fetch("demo/placements.json").then((r) => r.json()),
+        loadPoints(`demo/points.${format}`),
+      ]);
+
+      // placements.json is what roompipe writes. A pin is drawn for every photo
+      // that got a position, whoever placed it.
+      let pins = placements
+        .filter((p) => p.x !== null)
+        .map((p, i) => ({ id: i + 1, x: p.x, y: p.y, z: p.z, label: p.photo, placedBy: p.placed_by || "other" }));
+
+      const viewer = createRoomViewer(document.querySelector("#room"), {
+        positions: points.positions,
+        colors: points.colors,
+        box: room.box,
+        pins,
+        onPinSelect(pin) { choose(pin ? pin.id : null); },
+      });
+      window.viewer = viewer; // so the page can be poked at from the browser's console
+
+      function showPins() {
+        list.replaceChildren(...pins.map((pin) => {
+          const item = document.createElement("li");
+          item.dataset.id = pin.id;
+          const name = document.createElement("span");
+          const dot = document.createElement("span");
+          dot.className = "dot";
+          dot.style.background = pin.placedBy === "ai" ? "#e4572e" : "#2f6fdd";
+          name.append(dot, pin.label); // set as text, never as HTML
+          const where = document.createElement("span");
+          where.className = "meta";
+          where.textContent = `${pin.x.toFixed(2)}, ${pin.y.toFixed(2)}, ${pin.z.toFixed(2)} m · placed by ${pin.placedBy}`;
+          item.append(name, where);
+          item.addEventListener("click", () => choose(pin.id));
+          return item;
+        }));
+      }
+
+      function choose(id) {
+        viewer.selectPin(id);
+        for (const item of list.children) item.classList.toggle("chosen", Number(item.dataset.id) === id);
+        const pin = pins.find((p) => p.id === id);
+        status.textContent = pin ? `${pin.label}: taken ${pin.z.toFixed(2)} m above the floor.` : "Drag to turn the room. Pinch or scroll to move closer. Tap a pin.";
+      }
+
+      function setView(name) {
+        viewer.setView(name);
+        document.querySelector("#inside").setAttribute("aria-pressed", String(name === "inside"));
+        document.querySelector("#above").setAttribute("aria-pressed", String(name === "above"));
+      }
+      document.querySelector("#inside").addEventListener("click", () => setView("inside"));
+      document.querySelector("#above").addEventListener("click", () => setView("above"));
+
+      const placeButton = document.querySelector("#place");
+      placeButton.addEventListener("click", () => {
+        if (viewer.info().placing) {
+          viewer.cancelPlacing();
+          placeButton.setAttribute("aria-pressed", "false");
+          choose(null);
+          return;
+        }
+        placeButton.setAttribute("aria-pressed", "true");
+        status.textContent = "Tap the floor where the photo was taken.";
+        viewer.startPlacing((spot) => {
+          placeButton.setAttribute("aria-pressed", "false");
+          const pin = { id: Math.max(0, ...pins.map((p) => p.id)) + 1, ...spot, label: "placed by hand", placedBy: "user" };
+          pins = [...pins, pin];
+          viewer.setPins(pins);
+          showPins();
+          choose(pin.id);
+        });
+      });
+
+      showPins();
+      choose(null);
+      document.body.dataset.ready = `${points.count} points, ${pins.length} pins, ${format}`;
+    } catch (error) {
+      status.textContent = `The room could not be shown: ${error.message}`;
+      document.body.dataset.ready = "failed";
+      throw error;
+    }
+  </script>
+</body>
+</html>

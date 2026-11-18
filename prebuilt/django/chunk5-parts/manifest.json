@@ -1,0 +1,24 @@
+{
+  "files": {
+    "config/settings.py": {
+      "action": "replace",
+      "base": "36d1de6d836a4b64410cdb2791bac070971cb3233aeabd2805a2bc9e32c1fb54"
+    },
+    "rooms/forms.py": {
+      "action": "replace",
+      "base": "e6c49bb964df8ea863372b8b7bf00e3e6020d88be07b358ea24a20a17f7ecddf"
+    },
+    "rooms/photos.py": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/tests/test_memories.py": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/validators.py": {
+      "action": "replace",
+      "base": "2ef8e305aa05af9c73d2ece0a55401608d22a9adee8ad89ead0d0e405c3a76e1"
+    }
+  }
+}

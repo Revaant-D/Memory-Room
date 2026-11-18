@@ -1,0 +1,64 @@
+{
+  "files": {
+    "config/settings.py": {
+      "action": "replace",
+      "base": "254ee712da521c2cfaecd6fb8bb8251e5679486edd0bc2463c0e0d14711fe4f2"
+    },
+    "rooms/access.py": {
+      "action": "replace",
+      "base": "1937bf19d59bb7831ebc920c19cd8c63e5025281406e1be4e0cbab24245860d5"
+    },
+    "rooms/forms.py": {
+      "action": "replace",
+      "base": "60d707dbc1fcc4fc6a8a921e72d2bdfb95f40dae3fa9ec46b569482ed6127cea"
+    },
+    "rooms/models.py": {
+      "action": "replace",
+      "base": "11492782114c3ee8ebff5b3e14eacf6734c33e135f26b6dbd3ad4d3168d49813"
+    },
+    "rooms/templates/rooms/home.html": {
+      "action": "replace",
+      "base": "d797adc54747b99b77ade1c9d49667c07f294206b7b30d5aaefadced8bc11bc5"
+    },
+    "rooms/templates/rooms/memory_confirm_delete.html": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/templates/rooms/memory_form.html": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/templates/rooms/memory_upload.html": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/templates/rooms/place_detail.html": {
+      "action": "replace",
+      "base": "3ef93016f8ad50f73b5b7746f6d0f05ee6ba440287c26bd250ef179fb8925bd5"
+    },
+    "rooms/tests/test_memory_files.py": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/tests/test_memory_pages.py": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/tests/test_memory_upload.py": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/urls.py": {
+      "action": "replace",
+      "base": "403bef1b6e27f30d38278c20b9907ef5701ff123b7a393c0bb3957d101ecdc0e"
+    },
+    "rooms/views.py": {
+      "action": "replace",
+      "base": "849fb2b4308276dcb335f81c48484d7e49510a657bb7f86deee643f17743ac0e"
+    },
+    "static/css/site.css": {
+      "action": "replace",
+      "base": "efd3835b2d34a57e17ea73b03aaf878c1bfc3c120e2d45d63e08e4a544258757"
+    }
+  }
+}

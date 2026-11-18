@@ -1,0 +1,46 @@
+{
+  "django": [
+    {
+      "name": "chunk2-models",
+      "dir": "django/chunk2-models",
+      "title": "Plan chunk 2: Place, Scan, Memory, Pin"
+    },
+    {
+      "name": "chunk3-places",
+      "dir": "django/chunk3-places",
+      "title": "Plan chunk 3: places pages"
+    },
+    {
+      "name": "chunk4-video",
+      "dir": "django/chunk4-video",
+      "title": "Plan chunk 4: room video upload"
+    },
+    {
+      "name": "chunk5-parts",
+      "dir": "django/chunk5-parts",
+      "title": "Part of plan chunk 5: the pieces D2 and D3 do not affect"
+    }
+  ],
+  "chunk5_choices": [
+    {
+      "name": "chunk5-D2a-D3a",
+      "dir": "django/chunk5-rest/D2a-D3a",
+      "title": "many photos at once (D2 a); owner-checking photo view (D3 a)"
+    },
+    {
+      "name": "chunk5-D2b-D3a",
+      "dir": "django/chunk5-rest/D2b-D3a",
+      "title": "one photo per form (D2 b); owner-checking photo view (D3 a)"
+    },
+    {
+      "name": "chunk5-D2a-D3b",
+      "dir": "django/chunk5-rest/D2a-D3b",
+      "title": "many photos at once (D2 a); open, hard-to-guess addresses (D3 b)"
+    },
+    {
+      "name": "chunk5-D2b-D3b",
+      "dir": "django/chunk5-rest/D2b-D3b",
+      "title": "one photo per form (D2 b); open, hard-to-guess addresses (D3 b)"
+    }
+  ]
+}

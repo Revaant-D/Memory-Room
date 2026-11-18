@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}{{ place.name }} · Memory Room{% endblock %}
+
+{% block content %}
+  <p><a href="{% url 'place_list' %}">← Your places</a></p>
+
+  <div class="page-head">
+    <h1>{{ place.name }}</h1>
+    <span class="page-head__links">
+      <a href="{% url 'place_edit' place.slug %}">Rename</a>
+      <a class="danger-link" href="{% url 'place_delete' place.slug %}">Delete</a>
+    </span>
+  </div>
+  <p class="meta">Created {{ place.created|date:"j M Y" }}</p>
+
+  <section class="section">
+    <div class="page-head">
+      <h2>Room scans</h2>
+    </div>
+    <p class="empty">No room video yet.</p>
+  </section>
+
+  <section class="section">
+    <div class="page-head">
+      <h2>Photos</h2>
+    </div>
+    <p class="empty">No photos yet.</p>
+  </section>
+{% endblock %}

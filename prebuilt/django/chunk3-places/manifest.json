@@ -1,0 +1,56 @@
+{
+  "files": {
+    "rooms/access.py": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/forms.py": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/models.py": {
+      "action": "replace",
+      "base": "547ab7ad473e549b8ed6af5f210cde08cef485bfbc1eaf8c8eb179cc22b68016"
+    },
+    "rooms/templates/rooms/home.html": {
+      "action": "replace",
+      "base": "3b1a82b8a84516dbcf9a9c6586b4e224256692efaea6af12131ebfcc016f1748"
+    },
+    "rooms/templates/rooms/place_confirm_delete.html": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/templates/rooms/place_detail.html": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/templates/rooms/place_form.html": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/templates/rooms/place_list.html": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/tests/test_home.py": {
+      "action": "replace",
+      "base": "55b9370d9febef57e464c32400c0073cb0823ac873afef8d3aaa7a02e1513d10"
+    },
+    "rooms/tests/test_places.py": {
+      "action": "add",
+      "base": null
+    },
+    "rooms/urls.py": {
+      "action": "replace",
+      "base": "5df5a752c2a04b1af854696addca5ac9edbc334348933f759555ad6d95166278"
+    },
+    "rooms/views.py": {
+      "action": "replace",
+      "base": "fbb380676f7f5f1de90dec0aad6e5e4eddbe8cb4d97500ff8ce11484a4671da8"
+    },
+    "static/css/site.css": {
+      "action": "replace",
+      "base": "09d0519e50979144bf0420657a5974b53a319e867b41fe9acd5f13e05e42569e"
+    }
+  }
+}
