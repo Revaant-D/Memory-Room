@@ -136,3 +136,17 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 # private, so each one is handed out by a view that checks the owner first.
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "/media/"
+
+
+# --- Upload limits --------------------------------------------------------
+
+# The largest room video the app accepts. A phone filming at 1080p writes
+# roughly 130 MB a minute, so 500 MB is about three minutes of video.
+# rooms/validators.py reads this number; the message a person sees uses it too.
+MAX_VIDEO_BYTES = 500 * 1024 * 1024
+
+# The largest single photo the app accepts. Phone photos are 2 to 12 MB.
+MAX_PHOTO_BYTES = 20 * 1024 * 1024
+
+# The most photos accepted in one upload.
+MAX_PHOTOS_PER_UPLOAD = 50

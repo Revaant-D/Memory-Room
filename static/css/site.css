@@ -12,6 +12,7 @@
   --danger: #a3341f;
   --ok-bg: #e5f1ea;
   --error-bg: #f9e4df;
+  --warn-bg: #fdf1d6;
   --radius: 8px;
 }
 
@@ -27,6 +28,7 @@
     --danger: #f08c75;
     --ok-bg: #1d3028;
     --error-bg: #3a211c;
+    --warn-bg: #3a3118;
   }
 }
 
@@ -101,3 +103,49 @@ a { color: var(--accent); }
   color: var(--danger); font-weight: 600;
 }
 .form-footer { margin-top: 20px; color: var(--ink-soft); }
+
+/* Pages that list things: places, and what is inside a place */
+.page-head {
+  display: flex; flex-wrap: wrap; align-items: center;
+  justify-content: space-between; gap: 8px 16px; margin-bottom: 12px;
+}
+.page-head h1, .page-head h2 { margin: 0; overflow-wrap: anywhere; }
+.page-head__links { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.section { margin-top: 28px; }
+.meta, .empty { color: var(--ink-soft); }
+.card-list { list-style: none; margin: 0; padding: 0; }
+.card-list li {
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px;
+  padding: 12px 14px; margin-bottom: 8px; overflow-wrap: anywhere;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.button--danger { background: var(--danger); border-color: var(--danger); color: var(--card); }
+.danger-link { color: var(--danger); }
+
+/* Photos: a grid of squares on the place page, one large photo on its own page */
+.photo-grid {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;
+}
+.photo-grid li { display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+.photo-grid img {
+  display: block; width: 100%; aspect-ratio: 1; object-fit: cover;
+  border-radius: var(--radius); background: var(--line);
+}
+.photo-large {
+  display: block; max-width: 100%; max-height: 60vh; margin-bottom: 16px;
+  border-radius: var(--radius); background: var(--line);
+}
+
+/* The 3D room page: the room fills the column; the chosen photo shows below it */
+.room-view {
+  width: 100%; height: min(62vh, 560px);
+  border-radius: var(--radius); overflow: hidden; background: #15151a; touch-action: none;
+}
+.room-actions { margin-top: 12px; }
+.button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.notice-warn { background: var(--warn-bg); border-radius: var(--radius); padding: 10px 14px; }
+.pin-detail { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; margin-top: 12px; }
+.pin-detail[hidden] { display: none; }
+.pin-detail img { width: 140px; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius); background: var(--line); }
+.pin-detail p { margin: 0 0 6px; overflow-wrap: anywhere; }

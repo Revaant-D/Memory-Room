@@ -33,6 +33,15 @@ class HomeTests(TestCase):
         response = self.client.get("/no-such-page/")
         self.assertEqual(response.status_code, 404)
 
+    def test_home_redirects_when_logged_in(self):
+        # A logged-in person has no use for the landing page.
+        from django.contrib.auth import get_user_model
+
+        user = get_user_model().objects.create_user("ana", password="pass-12345-word")
+        self.client.force_login(user)
+        response = self.client.get("/")
+        self.assertRedirects(response, "/places/")
+
 
 class ErrorPageTests(TestCase):
     def test_not_found_page_is_ours(self):

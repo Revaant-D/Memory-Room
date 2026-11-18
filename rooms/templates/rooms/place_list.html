@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Your places · Memory Room{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <h1>Your places</h1>
+    <a class="button" href="{% url 'place_create' %}">New place</a>
+  </div>
+
+  {% if places %}
+    <ul class="card-list">
+      {% for place in places %}
+        <li>
+          <a href="{{ place.get_absolute_url }}">{{ place.name }}</a>
+          <span class="meta">Created {{ place.created|date:"j M Y" }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="empty">No places yet. A place is one room you want to keep.</p>
+  {% endif %}
+{% endblock %}

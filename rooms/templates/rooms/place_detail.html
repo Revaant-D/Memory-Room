@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}{{ place.name }} · Memory Room{% endblock %}
+
+{% block content %}
+  <p><a href="{% url 'place_list' %}">← Your places</a></p>
+
+  <div class="page-head">
+    <h1>{{ place.name }}</h1>
+    <span class="page-head__links">
+      <a href="{% url 'place_edit' place.slug %}">Rename</a>
+      <a class="danger-link" href="{% url 'place_delete' place.slug %}">Delete</a>
+    </span>
+  </div>
+  <p class="meta">Created {{ place.created|date:"j M Y" }}</p>
+
+  <section class="section">
+    <div class="page-head">
+      <h2>Room scans</h2>
+      <a class="button button--small" href="{% url 'scan_create' place.slug %}">Add a room video</a>
+    </div>
+    {% if scans %}
+      <ul class="card-list">
+        {% for scan in scans %}
+          <li>
+            <span>Filmed {{ scan.taken_on|date:"j M Y" }} · {{ scan.get_status_display }}</span>
+            <span class="page-head__links">
+              {% if scan.status == "ready" %}
+                <a href="{% url 'scan_room' scan.pk %}">View the room in 3D</a>
+              {% endif %}
+              <a class="danger-link" href="{% url 'scan_delete' scan.pk %}">Delete</a>
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+      <p class="meta">The 3D room is built outside the app for now. When a scan is ready, it opens in 3D from here.</p>
+    {% else %}
+      <p class="empty">No room video yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="section">
+    <div class="page-head">
+      <h2>Photos{% if memories %} ({{ memories|length }}){% endif %}</h2>
+      <a class="button button--small" href="{% url 'memory_create' place.slug %}">Add photos</a>
+    </div>
+    {% if memories %}
+      <ul class="photo-grid">
+        {% for memory in memories %}
+          <li>
+            {# Tapping a photo opens its page: caption, date, delete. #}
+            <a href="{% url 'memory_edit' memory.pk %}">
+              <img src="{{ memory.photo_address }}" loading="lazy"
+                   alt="{{ memory.caption|default:'Photo with no caption' }}">
+            </a>
+            <span>{{ memory.caption|default:"(no caption)" }}</span>
+            <span class="meta">{{ memory.taken_on|date:"j M Y"|default:"no date" }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="empty">No photos yet.</p>
+    {% endif %}
+  </section>
+{% endblock %}

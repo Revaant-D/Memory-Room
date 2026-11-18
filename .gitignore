@@ -15,6 +15,15 @@ staticfiles/
 .env.*
 !.env.example
 
+# The code zip for Colab, rebuilt by ai/pack_for_colab.py
+ai/dist/
+
+# Built rooms show the inside of someone's room: never in git. A room is
+# imported into media/ (ignored above); its points file and zip stay out too.
+# (prebuilt/viewer/demo/points.ply, a made-up room, was committed before this.)
+*.ply
+*.zip
+
 # Model weights never go in git (class rule)
 *.bin
 *.safetensors

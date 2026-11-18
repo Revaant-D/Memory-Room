@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Delete {{ place.name }} · Memory Room{% endblock %}
+
+{% block content %}
+  <h1>Delete this place?</h1>
+  <p><strong>{{ place.name }}</strong> will be deleted for good, together with:</p>
+  <ul>
+    <li>{{ scan_count }} room video{{ scan_count|pluralize }}</li>
+    <li>{{ memory_count }} photo{{ memory_count|pluralize }}</li>
+  </ul>
+  <p>This cannot be undone.</p>
+  <form method="post">
+    {% csrf_token %}
+    <p class="actions">
+      <button class="button button--danger" type="submit">Delete place</button>
+      <a class="button button--quiet" href="{{ place.get_absolute_url }}">Cancel</a>
+    </p>
+  </form>
+{% endblock %}

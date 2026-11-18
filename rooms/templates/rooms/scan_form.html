@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Add a room video · {{ place.name }} · Memory Room{% endblock %}
+
+{% block content %}
+  <p><a href="{{ place.get_absolute_url }}">← {{ place.name }}</a></p>
+  <h1>Add a room video</h1>
+  <p class="meta">
+    Walk slowly around the room once, filming every wall. A large video can
+    take a few minutes to upload: keep this page open until it finishes.
+  </p>
+  {# enctype is what lets a form carry a file. Without it only the file's name is sent. #}
+  <form class="form" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% include "includes/form_fields.html" %}
+    <p class="actions">
+      <button class="button" type="submit">Upload video</button>
+      <a class="button button--quiet" href="{{ place.get_absolute_url }}">Cancel</a>
+    </p>
+  </form>
+{% endblock %}
