@@ -46,8 +46,8 @@ This page is the first-draft write-up: the product scope (§1), the AI plan and 
 
 | # | AI feature | In → out | Exists today? |
 | --- | --- | --- | --- |
-| 1 | **Build the room** | About 60 frames from the room video → a coloured 3D point for every pixel, and where the camera was for every frame | Coded and tested with a stand-in model. Not yet run on a real video; the first real run is planned for 18 Nov (see Evidence) |
-| 2 | **Place a photo** | A photo plus frames of the room → where the camera stood, or "can't place, ask the user" | Coded and tested with a stand-in model. Not yet run on real photos; planned with the first real run |
+| 1 | **Build the room** | About 60 frames from the room video → a coloured 3D point for every pixel, and where the camera was for every frame | **Works.** First run on a real video on 18 Nov (Colab T4): a recognisable room, about 10% small; a levelling bug found and fixed the same day (see Evidence) |
+| 2 | **Place a photo** | A photo plus frames of the room → where the camera stood, or "can't place, ask the user" | Coded and tested with a stand-in model. Ran once on two real photos: neither placed, because the check found the run unreliable (see Evidence) |
 | 3 | **Refine a hand-placed photo** | A photo plus the spot the user tapped → the exact spot | Planned |
 | 4 | **Find a room's photos** | A large batch of photos → the ones taken in this room (date, GPS, and how much the photo looks like the room) | Planned |
 | 5 | **Line up two scans** | A new scan and an older one → both in the same coordinates (needed for versions) | Planned |
@@ -121,6 +121,7 @@ The four limits are starting guesses, to be tuned on real photos.
 - Only the Apache weights load.
 - Unreadable images are counted and reported, not silently skipped.
 - A tilted video, or no floor in view, stops the run with "film again" and the reason.
+- The floor is the lowest flat layer, not the fullest, and the room is levelled by the floor's own plane (added after the first run; see Evidence).
 - Out of GPU memory: the build retries with fewer frames.
 - Output that is not real numbers stops the run and names the fix.
 - GPS and other EXIF data are stripped from the photo copies the model sees.
@@ -134,7 +135,37 @@ The four limits are starting guesses, to be tuned on real photos.
 - Full rehearsals of the notebook on the laptop with the stand-in model, the second after the fix below: every cell ran each time. A separate rehearsal with an unreadable video stopped with a plain message and still saved `run.json`.
 - A review of the notebook against MapAnything's source found one real problem (bf16 chosen on a T4) and fixed it before the run.
 
-**The first real run (planned for 18 Nov): not done yet.** _To be filled in from the run's `run.json`, `room.json` and `placements.json`, and the room measured with a tape (step C8). If the run fails, its failure and error are reported here instead._
+**The first real run, 18 Nov 2026** (`room-20261118-1342`; numbers from its `run.json`, `room.json` and `placements.json`):
+
+| | |
+| --- | --- |
+| GPU | Colab's free Tesla T4 (15.6 GB). fp16 was chosen by our check; PyTorch's own check had said bf16 was supported |
+| Video | 88.7 s, portrait, 1080 × 1920 at 30 frames a second; the 60 sharpest frames picked in 80 s |
+| Model | loaded in 124 s (5.0 GB on the GPU) |
+| Building the room | all 60 frames in one try: the model pass took 36 s, the whole step 63 s, at most 10.9 GB of GPU memory |
+| Result | 393,033 coloured points, from 8.9 million before the least certain fifth was dropped and the room was thinned to one point per 2 cm. The frames agreed on "up" at 0.987 (1 is perfect) |
+
+The room is recognisable: the L-shaped floor, the walls, the bed in its alcove and the corridor, with the camera's path through them.
+
+**What went wrong, said plainly:**
+
+1. **The bed was taken for the floor.** The levelling step put the floor at the fullest 1 cm layer of points, and the bed top (flat, 0.7 m up) held more points than the real floor: 3,471 against 3,351. The whole room came out 0.66 m too low. Separately, "up", worked out from how the phone was held, leaned 1.9° toward the way the phone faced most, which the agreement score could not catch.
+   **Fixed the same day:** the floor is now the lowest flat layer, and the room is levelled by the floor's own plane. Thirteen new tests cover the fix, including a bed top that holds more points than the floor (109 AI tests in all). The model's output was sound, so the room was corrected on the laptop (`python -m roompipe relevel`) instead of being built again: the floor was 1.92° off level and 0.656 m below the false floor. The corrected room is the one imported into the app.
+2. **Size: about 10% small.** Measured against a tape, after the fix (the room turned so its walls run along the axes):
+
+   | | Tape | Model | Difference |
+   | --- | --- | --- | --- |
+   | Longest straight wall | 4.75 m (187 in) | 4.22 m | −11% |
+   | Longer corridor wall | 2.90 m (114 in) | 2.58 m | −11% |
+   | Top of the bed above the floor | 0.76 m (30 in) | 0.69–0.70 m | −9% |
+   | Ceiling height | 2.67 m (105 in) | no flat ceiling found: the phone, tilted down, saw little of it, and the points there are scattered between about 2.2 and 2.8 m | not measurable |
+   | Bed length | 1.93 m (76 in) | the bed top was rebuilt only in part, and its ends cannot be told apart from the alcove's walls | not measurable |
+
+   The tape figures are the builder's rough measurements. MapAnything's "metric" scale is about a tenth small in this room; nothing in our code corrects scale yet.
+3. **Shape.** Several walls appear as two to four parallel lines, up to about 25 cm apart, so some frames do not line up exactly with the others. The corridor's long wall comes out at 13° to the room's other walls.
+4. **No photo was placed.** This run had two photos, both old (August and October 2026). Neither was pinned: when the model ran again with the photos and 10 of the room's frames, those frames lined up with the first build only to within 1.16 m, against a limit of 15 cm. The check therefore answered "ask the user" for both, as designed, rather than pinning a guess. The two tries were 2.66 m and 2.25 m apart. The planned test photos taken on numbered sheets were not part of this run.
+
+**What this changes:** a scale correction from one known length (for example the bed's height, entered by the user) is the leading candidate for the evaluation's "one improvement". Photo placement needs its own investigation before 8 Dec: why the frames line up so poorly on the second pass.
 
 ---
 
@@ -146,8 +177,8 @@ The four limits are starting guesses, to be tuned on real photos.
 | --- | --- | --- | --- |
 | **Django Core Features** | Done: sign-up and login; places (create, rename, delete); room video upload; photos (many at once, captions, dates, delete); a 3D room page for each built scan, with photos as dots. Each user sees only their own. 240 tests pass. Remaining: placing a photo by hand on the 3D page, pages to switch between versions | Revaant Daga (solo) | 2 Dec |
 | **Database and APIs** | Done: four models with relationships (a user's Place has Scans and Memories; a Pin joins a Memory to a Scan at x, y, z), migrations, admin; a command that imports a built room and its facts. Remaining: a JSON API (a room with its pins; move a pin), search and a timeline of a place's photos | Revaant Daga (solo) | 1 Dec |
-| **AI Integration** | Done: the room-building and photo-placing code, in a Colab notebook, tested with a stand-in model; a command that brings a built room into the app. Not yet run on a GPU (the first real run is planned for 18 Nov). Remaining: Django starts the GPU job; placement with highlighted photos and hand placement; refining a hand-placed photo; lining up two scans | Revaant Daga (solo) | 5 Dec |
-| **Evaluation and Testing** | Done: 240 Django tests and 96 AI tests; a code review of the whole first draft (18 Nov: 15 findings, 12 fixed with a test each, 3 deferred); the first real run will be the first evaluation row. Remaining: five realistic tests in a table, two real failures, one improvement with before and after | Revaant Daga (solo) | 5 Dec |
+| **AI Integration** | Done: the room-building and photo-placing code, in a Colab notebook, tested with a stand-in model; a command that brings a built room into the app. First real run on 18 Nov on a Colab T4; that room is in the app. Remaining: correcting the room's scale; Django starts the GPU job; placement with highlighted photos and hand placement; refining a hand-placed photo; lining up two scans | Revaant Daga (solo) | 5 Dec |
+| **Evaluation and Testing** | Done: 240 Django tests and 109 AI tests; a code review of the whole first draft (18 Nov: 15 findings, 12 fixed with a test each, 3 deferred); the first real run, checked against a tape measure, is the first evaluation row (§2, Evidence). Remaining: five realistic tests in a table, two real failures, one improvement with before and after | Revaant Daga (solo) | 5 Dec |
 | **Deployment** | Not started. Runs locally (SQLite, files on disk). Remaining: a live host, a GPU service, two options compared on cost, what changes at 10,000 daily users, security | Revaant Daga (solo) | 6 Dec |
 | **Documentation** | Done: `README.md`, this page, a system map, the AI README, a filming guide. Remaining: `README_AI.md` and the three-minute video | Revaant Daga (solo) | 8 Dec |
 

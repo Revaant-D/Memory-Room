@@ -3,18 +3,18 @@
 {% block title %}Delete photo · {{ place.name }} · Memory Room{% endblock %}
 
 {% block content %}
+  <a class="back" href="{% url 'memory_edit' memory.pk %}">This photo</a>
   <h1>Delete this photo?</h1>
-  <img class="photo-large" src="{{ memory.photo_address }}"
-       alt="{{ memory.caption|default:'Photo with no caption' }}">
-  <p>
-    {% if memory.caption %}<strong>{{ memory.caption }}</strong> will{% else %}This photo will{% endif %}
-    be deleted from <strong>{{ place.name }}</strong> for good. This cannot be undone.
+  <img class="photo-large" src="{{ memory.photo_address }}" alt="{{ memory.caption|default:'Photo with no caption' }}">
+  <p class="meta">
+    {% if memory.caption %}“{{ memory.caption }}” goes{% else %}It goes{% endif %} from {{ place.name }} for good,
+    with its place in the room. This can’t be undone.
   </p>
   <form method="post">
     {% csrf_token %}
     <p class="actions">
-      <button class="button button--danger" type="submit">Delete photo</button>
-      <a class="button button--quiet" href="{% url 'memory_edit' memory.pk %}">Cancel</a>
+      <button class="act act--danger" type="submit">Delete photo</button>
+      <a class="quiet" href="{% url 'memory_edit' memory.pk %}">Keep it</a>
     </p>
   </form>
 {% endblock %}

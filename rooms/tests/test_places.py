@@ -1,6 +1,7 @@
 """Tests for the places pages: list, create, open, rename, delete, and who may do so."""
 
 from django.contrib.messages import get_messages
+from django.core.files.base import ContentFile
 
 from rooms.models import Memory, Place, Scan
 from rooms.tests.utils import TempMediaTestCase, jpeg_file, make_user, video_file
@@ -40,8 +41,9 @@ class PlaceListCreateOpenTests(PlacePagesTestCase):
         self.assertNotContains(response, "Flat")
 
     def test_empty_list(self):
+        # 18 Nov (Dollhouse look): was "No places yet"; the empty field offers the first place.
         response = self.client.get("/places/")
-        self.assertContains(response, "No places yet")
+        self.assertContains(response, "Film your first place")
         self.assertContains(response, 'href="/places/new/"')
 
     def test_create_place(self):
@@ -94,10 +96,12 @@ class PlaceListCreateOpenTests(PlacePagesTestCase):
         self.assertContains(self.client.get("/places/new-2/"), "New")
         self.assertContains(self.client.get("/places/new/"), "Create place")
 
-    def test_detail_has_both_sections(self):
-        response = self.client.get(self.make_place().get_absolute_url())
-        self.assertContains(response, "Room scans")
-        self.assertContains(response, "Photos")
+    def test_detail_offers_a_video_and_photos(self):
+        # 18 Nov: the "Room scans" and "Photos" headings went with the Dollhouse look.
+        place = self.make_place()
+        response = self.client.get(place.get_absolute_url())
+        self.assertContains(response, f'href="/places/{place.slug}/scans/new/"')
+        self.assertContains(response, f'href="/places/{place.slug}/memories/new/"')
 
 
 class PlaceRenameDeleteTests(PlacePagesTestCase):
@@ -160,3 +164,40 @@ class PlaceRenameDeleteTests(PlacePagesTestCase):
                     response, f"/accounts/login/?next={path}", fetch_redirect_response=False
                 )
         self.assertTrue(Place.objects.filter(pk=self.place.pk).exists())
+
+
+class PlaceListRoomsTests(PlacePagesTestCase):
+    """Your places (18 Nov): a place with a built room is drawn as its model; the rest are plots."""
+
+    PLY = b"ply\nformat binary_little_endian 1.0\nelement vertex 0\nend_header\n"
+
+    def place_with_room(self, name):
+        place = self.make_place(name)
+        scan = Scan.objects.create(place=place, video=video_file())
+        scan.points_file.save("points.ply", ContentFile(self.PLY), save=False)
+        scan.status = Scan.Status.READY
+        scan.save()
+        return place, scan
+
+    def test_place_with_a_room_is_drawn_as_its_model(self):
+        place, scan = self.place_with_room("Octave Room")
+        Memory.objects.create(place=place, photo=jpeg_file())
+        response = self.client.get("/places/")
+        self.assertContains(response, f"/scans/{scan.pk}/points.ply?v=")
+        self.assertContains(response, 'class="model"')
+        self.assertContains(response, "1 photo")
+
+    def test_place_without_a_room_is_a_plot(self):
+        self.make_place("Kitchen")
+        response = self.client.get("/places/")
+        self.assertContains(response, "Kitchen")
+        self.assertContains(response, "No room yet")
+        self.assertNotContains(response, "points.ply")
+
+    def test_at_most_three_models(self):
+        for name in ("One", "Two", "Three", "Four"):
+            self.place_with_room(name)
+        response = self.client.get("/places/")
+        self.assertEqual(response.content.decode().count("points.ply?v="), 3)
+        for name in ("One", "Two", "Three", "Four"):
+            self.assertContains(response, name)  # the fourth is still there, as a plot

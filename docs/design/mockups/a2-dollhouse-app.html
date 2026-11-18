@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memory Room app mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gloock&family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
+<script type="importmap">{"imports":{"three":"/static/viewer/vendor/three.module.min.js","three/addons/":"/static/viewer/vendor/"}}</script>
+<style>
+  :root {
+    --field: #3e4752;
+    --field-lit: #4c5663;
+    --ink: #eef0f2;
+    --ink-soft: #a9b2bc;
+    --memory: #ff6fae;
+    --danger: #ff9b8a;
+    --line: rgba(238, 240, 242, .22);
+    --line-strong: rgba(238, 240, 242, .45);
+    --panel: #343c46;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body { background: radial-gradient(ellipse 70% 60% at 50% 55%, var(--field-lit), var(--field) 70%);
+         color: var(--ink); font: 400 16px/1.5 Onest, system-ui, sans-serif; }
+  #stage { position: fixed; inset: 0; transition: opacity .6s ease, filter .6s ease; }
+  .form-page #stage { opacity: .16; filter: blur(2px); pointer-events: none; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--memory); outline-offset: 4px; border-radius: 4px; }
+  .serif { font-family: Gloock, Georgia, serif; font-weight: 400; letter-spacing: -.01em; }
+
+  .layer { position: fixed; opacity: 0; pointer-events: none; transition: opacity .5s ease; }
+  .layer.on { opacity: 1; pointer-events: auto; }
+
+  .act { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 22px; border-radius: 999px;
+         background: var(--memory); color: #2a1220; font-weight: 600; text-decoration: none; }
+  .quiet { display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; color: var(--ink);
+           text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--line-strong); }
+  .quiet:hover { text-decoration-color: var(--ink); }
+  .back { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-soft); min-height: 44px; text-decoration: none; }
+  .back:hover { color: var(--ink); }
+  .back svg { width: 16px; height: 16px; }
+  .wordmark { position: fixed; top: 22px; left: clamp(16px, 6vw, 80px); font-size: 1.15rem; }
+
+  /* Landing */
+  #landing { left: clamp(16px, 6vw, 80px); bottom: clamp(28px, 9vh, 96px); max-width: 30rem; }
+  #landing h1 { font-size: clamp(2.6rem, 7vw, 5.2rem); line-height: .95; margin: 0 0 22px; }
+  #landing p { margin: 0 0 28px; color: var(--ink-soft); max-width: 22rem; }
+  #landing .quiet { margin-left: 14px; }
+
+  /* Forms: a narrow column on the field */
+  .form { top: 0; bottom: 0; left: 0; right: 0; overflow: auto; padding: clamp(80px, 14vh, 140px) 16px 48px; }
+  .form > div { max-width: 26rem; margin: 0 auto; }
+  .form h1 { font-size: clamp(2rem, 5vw, 2.8rem); line-height: 1; margin: 6px 0 28px; }
+  .field { margin-bottom: 18px; }
+  .field label { display: block; color: var(--ink-soft); font-size: .9rem; margin-bottom: 6px; }
+  .field input:not([type=file]) { width: 100%; min-height: 48px; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--line-strong);
+                 background: rgba(0, 0, 0, .12); color: var(--ink); font: inherit; font-size: 1rem; }
+  .field input:focus { border-color: var(--ink); outline: none; }
+  .form .row { display: flex; align-items: center; gap: 14px; margin-top: 26px; flex-wrap: wrap; }
+  .form .after { color: var(--ink-soft); margin-top: 28px; }
+  .drop { display: grid; place-items: center; text-align: center; min-height: 190px; border: 1.5px dashed var(--line-strong); border-radius: 10px;
+          color: var(--ink-soft); cursor: pointer; padding: 20px; }
+  .drop:hover { border-color: var(--ink); color: var(--ink); }
+  .drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .drop b { display: block; color: var(--ink); font-weight: 500; }
+  .chosen { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .chosen img { width: 48px; height: 64px; object-fit: cover; border-radius: 4px; }
+  .edit-photo { width: 100%; max-height: 46vh; object-fit: contain; border-radius: 6px; margin-bottom: 22px; background: rgba(0,0,0,.15); }
+  .danger { color: var(--danger); }
+
+  /* Your places */
+  #places-head { top: 22px; left: clamp(16px, 6vw, 80px); right: 16px; display: flex; justify-content: space-between; align-items: center; }
+  #places-head h1 { font-size: 1.6rem; margin: 0; }
+  .model-label { position: fixed; left: 0; top: 0; transform: translateX(-50%); text-align: center; white-space: nowrap; }
+  .model-label .name { font-size: clamp(1.6rem, 3.6vw, 2.4rem); line-height: 1; display: block; }
+  .model-label .facts { color: var(--ink-soft); font-size: .9rem; }
+  #enter { position: fixed; border-radius: 50%; }
+  #plots { position: fixed; right: clamp(24px, 6vw, 90px); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 26px; }
+  .plot { position: relative; width: 150px; height: 110px; border: 1.5px dashed var(--line-strong); border-radius: 6px; transform: skewX(-18deg);
+          display: grid; place-items: center; color: var(--ink-soft); text-align: center; text-decoration: none; }
+  .plot > span { transform: skewX(18deg); font-size: .9rem; line-height: 1.3; padding: 0 8px; }
+  .plot > span b { display: block; font-family: Gloock, serif; font-weight: 400; color: var(--ink); font-size: 1.2rem; }
+  .plot:hover { border-color: var(--ink); color: var(--ink); }
+
+  /* A place with a room */
+  #top { top: 14px; left: 16px; right: 16px; display: flex; align-items: center; gap: 16px; }
+  #top .name { font-size: 1.7rem; line-height: 1; margin-right: auto; }
+  .icon { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); }
+  .icon:hover, .icon[aria-expanded=true] { border-color: var(--ink); }
+  .icon svg { width: 18px; height: 18px; }
+  #menu { top: 66px; right: 16px; width: min(300px, calc(100% - 32px)); background: var(--panel); border-radius: 10px; padding: 8px;
+          box-shadow: 0 18px 50px rgba(0, 0, 0, .35); transform-origin: top right; transform: scale(.96); transition: opacity .2s, transform .2s; }
+  #menu.on { transform: none; }
+  #menu button, #menu a { display: block; width: 100%; text-align: left; padding: 10px 12px; border-radius: 6px; min-height: 44px; text-decoration: none; }
+  #menu button:hover, #menu a:hover { background: rgba(255, 255, 255, .06); }
+  #menu .group { border-top: 1px solid var(--line); margin: 6px 0; padding-top: 6px; }
+  #menu .video { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; color: var(--ink-soft); font-size: .92rem; }
+  #menu .video button { width: auto; min-height: 36px; padding: 4px 8px; }
+
+  .pin { position: fixed; left: 0; top: 0; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; display: grid; place-items: center;
+         opacity: 0; pointer-events: none; transition: opacity .4s; }
+  .pin::after { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--memory);
+                box-shadow: 0 0 0 4px rgba(255, 111, 174, .25), 0 0 18px 4px rgba(255, 111, 174, .5); transition: transform .25s; }
+  .pins-on .pin { opacity: 1; pointer-events: auto; }
+  .pin:hover::after, .pin.hot::after { transform: scale(1.5); }
+  .pin.dropped::after { animation: drop .7s cubic-bezier(.2, 1.6, .4, 1); }
+  @keyframes drop { from { transform: translateY(-60px) scale(.4); } }
+
+  #strip { bottom: 0; left: 0; right: 0; padding: 14px 16px 18px; display: flex; gap: 10px; justify-content: center; overflow-x: auto;
+           background: linear-gradient(transparent, rgba(30, 36, 43, .6)); }
+  .thumb { flex: 0 0 auto; width: 52px; height: 92px; border-radius: 5px; overflow: hidden; outline-offset: 3px; transition: transform .25s; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb:hover, .thumb.hot { transform: translateY(-6px); }
+  .thumb.waiting { outline: 2px dashed var(--memory); }
+  .thumb.waiting img { opacity: .55; }
+  .add-thumb { flex: 0 0 auto; width: 52px; height: 92px; border-radius: 5px; border: 1.5px dashed var(--line-strong); display: grid; place-items: center; color: var(--ink-soft); }
+  .add-thumb:hover { color: var(--ink); border-color: var(--ink); }
+  .add-thumb svg { width: 18px; height: 18px; }
+
+  /* A photo, opened */
+  #caption { left: clamp(16px, 6vw, 80px); bottom: clamp(24px, 8vh, 72px); max-width: 26rem; }
+  #caption .cap { font-size: clamp(1.6rem, 3.6vw, 2.4rem); line-height: 1.05; display: block; margin-bottom: 6px; }
+  #caption .when { color: var(--ink-soft); font-size: .9rem; display: block; }
+  #caption .links { display: flex; gap: 6px; margin-top: 10px; margin-left: -6px; }
+  #card { right: clamp(16px, 9vw, 140px); top: 50%; transform: translateY(-54%); width: min(280px, 56vw); }
+  #card img { width: 100%; display: block; border-radius: 4px; box-shadow: 0 24px 60px rgba(0, 0, 0, .45); }
+  #photo-nav { right: clamp(16px, 6vw, 80px); bottom: clamp(24px, 8vh, 72px); display: flex; gap: 8px; }
+  .round { width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; }
+  .round:hover { border-color: var(--ink); }
+  .round svg { width: 18px; height: 18px; }
+
+  #placing { top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none !important; }
+  #placing p { font-size: 1.6rem; margin: 0; text-shadow: 0 2px 20px rgba(0,0,0,.5); }
+  #placing-cancel { bottom: 32px; left: 50%; transform: translateX(-50%); }
+  #ghost { position: fixed; width: 46px; height: 82px; margin: -90px 0 0 -23px; border-radius: 4px; overflow: hidden; pointer-events: none;
+           opacity: 0; transition: opacity .3s; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+  #ghost img { width: 100%; height: 100%; object-fit: cover; }
+  .placing #stage { cursor: crosshair; }
+  .placing #ghost { opacity: 1; }
+
+  /* A place with no room yet */
+  #setup { top: 0; bottom: 0; left: 0; right: 0; overflow: auto; padding: 90px clamp(16px, 6vw, 80px) 48px; }
+  #setup h1 { font-size: clamp(2.4rem, 6vw, 4rem); line-height: 1; margin: 0 0 14px; }
+  #setup .status { color: var(--ink-soft); max-width: 30rem; margin: 0 0 24px; }
+  #setup .footprint { width: min(420px, 100%); aspect-ratio: 4 / 3; border: 1.5px dashed var(--line-strong); border-radius: 10px;
+                      transform: perspective(700px) rotateX(48deg); transform-origin: bottom; margin: 10px 0 34px; }
+  #setup .row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+
+  #toast { bottom: 132px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--field); padding: 10px 18px; border-radius: 999px; font-weight: 500; }
+
+  #loading { position: fixed; inset: 0; display: grid; place-items: center; color: var(--ink-soft); }
+  .mock-note { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 100; font: 500 12px system-ui, sans-serif;
+               padding: 6px 10px; border-radius: 8px; background: rgba(128, 128, 128, .28); color: var(--ink); }
+  .mock-note a { margin-left: 8px; }
+  @media (max-width: 600px) {
+    .mock-note { display: none; }
+    #plots { top: auto; bottom: 16px; right: 16px; left: 16px; transform: none; flex-direction: row; justify-content: center; gap: 14px; }
+    .plot { width: 120px; height: 80px; }
+    .thumb, .add-thumb { width: 42px; height: 74px; }
+    #top .name { font-size: 1.3rem; }
+    #caption { bottom: 140px; }
+    #photo-nav { bottom: 150px; }
+    #card { right: 50%; transform: translate(50%, -60%); width: 52vw; top: 42%; }
+  }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<p id="loading">Loading the room</p>
+<span class="wordmark serif layer" id="wordmark">Memory Room</span>
+
+<!-- Landing (logged out) -->
+<section id="landing" class="layer">
+  <h1 class="serif">Keep the room.</h1>
+  <p>Film a place once on your phone. It comes back as a room you can walk through, with your photos where you took them.</p>
+  <a class="act" href="#signup">Sign up</a><a class="quiet" href="#login">Log in</a>
+</section>
+
+<!-- Sign up / Log in -->
+<section id="signup" class="layer form"><div>
+  <a class="back" href="#landing"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3 5 8l5 5"/></svg>Memory Room</a>
+  <h1 class="serif">Sign up</h1>
+  <div class="field"><label for="su-name">Username</label><input id="su-name" autocomplete="username"></div>
+  <div class="field"><label for="su-pass">Password</label><input id="su-pass" type="password" autocomplete="new-password"></div>
+  <div class="field"><label for="su-pass2">Password again</label><input id="su-pass2" type="password" autocomplete="new-password"></div>
+  <div class="row"><a class="act" href="#places">Sign up</a></div>
+  <p class="after">Have an account? <a class="quiet" href="#login">Log in</a></p>
+</div></section>
+<section id="login" class="layer form"><div>
+  <a class="back" href="#landing"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3 5 8l5 5"/></svg>Memory Room</a>
+  <h1 class="serif">Log in</h1>
+  <div class="field"><label for="li-name">Username</label><input id="li-name" autocomplete="username"></div>
+  <div class="field"><label for="li-pass">Password</label><input id="li-pass" type="password" autocomplete="current-password"></div>
+  <div class="row"><a class="act" href="#places">Log in</a></div>
+  <p class="after">New here? <a class="quiet" href="#signup">Sign up</a></p>
+</div></section>
+
+<!-- Your places -->
+<header id="places-head" class="layer">
+  <h1 class="serif">Your places</h1>
+  <a class="quiet" href="#landing">Log out</a>
+</header>
+<div id="model-label" class="model-label layer"><span class="name serif">Octave Room</span><span class="facts" id="model-facts"></span></div>
+<a id="enter" class="layer" href="#room" aria-label="Open Octave Room"></a>
+<div id="plots"></div>
+
+<!-- New place form -->
+<section id="new-place" class="layer form"><div>
+  <a class="back" href="#places"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3 5 8l5 5"/></svg>Your places</a>
+  <h1 class="serif">A new place</h1>
+  <div class="field"><label for="np-name">What do you call it?</label><input id="np-name" placeholder="Grandma's kitchen"></div>
+  <div class="row"><button class="act" id="np-save">Make the place</button></div>
+</div></section>
+
+<!-- A place with no room yet -->
+<section id="setup" class="layer">
+  <a class="back" href="#places"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3 5 8l5 5"/></svg>Your places</a>
+  <h1 class="serif" id="setup-name"></h1>
+  <p class="status" id="setup-status"></p>
+  <div class="footprint" aria-hidden="true"></div>
+  <div class="row"><a class="act" href="#add-video" id="setup-video">Add a room video</a><a class="quiet" href="#add-photos">Add photos</a></div>
+</section>
+
+<!-- Add a room video -->
+<section id="add-video" class="layer form"><div>
+  <a class="back" href="#setup" id="video-back"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3 5 8l5 5"/></svg>Back</a>
+  <h1 class="serif">Add a room video</h1>
+  <label class="drop"><input type="file" accept="video/mp4,video/quicktime"><span><b>Choose the video</b>MP4 or MOV, up to 500 MB. One slow walk around the room.</span></label>
+  <div class="field" style="margin-top:18px"><label for="v-date">Filmed on</label><input id="v-date" type="date" value="2026-11-18"></div>
+  <div class="row"><button class="act" id="video-save">Add the video</button></div>
+</div></section>
+
+<!-- Add photos -->
+<section id="add-photos" class="layer form"><div>
+  <a class="back" href="#room" id="photos-back"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3 5 8l5 5"/></svg>Octave Room</a>
+  <h1 class="serif">Add photos</h1>
+  <label class="drop"><input type="file" id="pick" accept="image/jpeg,image/png,image/webp" multiple><span><b>Choose photos taken in this room</b>Up to 50 at once. Dates are read from the photos.</span></label>
+  <div class="chosen" id="chosen"></div>
+  <div class="row"><button class="act" id="photos-save">Add photos</button></div>
+</div></section>
+
+<!-- Edit a photo -->
+<section id="edit-photo" class="layer form"><div>
+  <a class="back" href="#room"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3 5 8l5 5"/></svg>Octave Room</a>
+  <h1 class="serif">This photo</h1>
+  <img class="edit-photo" id="edit-img" alt="">
+  <div class="field"><label for="e-cap">Caption</label><input id="e-cap"></div>
+  <div class="field"><label for="e-date">Taken on</label><input id="e-date" type="date" value="2026-11-18"></div>
+  <div class="row"><button class="act" id="edit-save">Save</button><button class="quiet danger" id="edit-delete">Delete this photo</button></div>
+</div></section>
+
+<!-- Rename -->
+<section id="rename" class="layer form"><div>
+  <a class="back" href="#room"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3 5 8l5 5"/></svg>Octave Room</a>
+  <h1 class="serif">Rename</h1>
+  <div class="field"><label for="r-name">Name</label><input id="r-name" value="Octave Room"></div>
+  <div class="row"><a class="act" href="#room">Save</a></div>
+</div></section>
+
+<!-- Delete place -->
+<section id="delete-place" class="layer form"><div>
+  <a class="back" href="#room"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3 5 8l5 5"/></svg>Octave Room</a>
+  <h1 class="serif">Delete Octave Room?</h1>
+  <p style="color:var(--ink-soft)">Its room, 1 video and <span id="del-count"></span> photos go with it. This can't be undone.</p>
+  <div class="row"><a class="act" style="background:var(--danger)" href="#places">Delete it</a><a class="quiet" href="#room">Keep it</a></div>
+</div></section>
+
+<!-- A place with a room -->
+<header id="top" class="layer">
+  <a class="back" href="#places" id="top-back"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3 5 8l5 5"/></svg><span id="back-label">Places</span></a>
+  <span class="name serif" id="top-name">Octave Room</span>
+  <button class="icon" id="menu-btn" aria-label="Place options" aria-expanded="false" aria-controls="menu"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="3" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/></svg></button>
+</header>
+<nav id="menu" class="layer" aria-label="Place options">
+  <a href="#add-photos">Add photos</a>
+  <a href="#add-video" id="menu-video">Add a room video</a>
+  <div class="group">
+    <div class="video"><span>Room filmed 18 Nov 2026</span><button class="danger">Delete</button></div>
+  </div>
+  <div class="group">
+    <a href="#rename">Rename</a>
+    <a href="#delete-place" class="danger">Delete this place</a>
+  </div>
+</nav>
+<div id="pins"></div>
+<nav id="strip" class="layer" aria-label="Photos"></nav>
+
+<section id="caption" class="layer" aria-live="polite">
+  <span class="cap serif" id="cap"></span>
+  <span class="when" id="when"></span>
+  <span class="links"><a class="quiet" href="#edit-photo">Edit</a><button class="quiet" id="move">Move</button></span>
+</section>
+<figure id="card" class="layer" style="margin:0"><img id="card-img" alt=""></figure>
+<nav id="photo-nav" class="layer">
+  <button class="round" data-step="-1" aria-label="Previous photo"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3 5 8l5 5"/></svg></button>
+  <button class="round" data-step="1" aria-label="Next photo"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m6 3 5 5-5 5"/></svg></button>
+</nav>
+<section id="placing" class="layer"><p class="serif">Tap where you stood</p></section>
+<button id="placing-cancel" class="layer quiet">Cancel</button>
+<div id="ghost"><img alt=""></div>
+<p id="toast" class="layer" role="status"></p>
+
+<p class="mock-note">Mockup of the app design <a href="a-dollhouse.html">first mockup</a></p>
+
+<script type="module">
+import { createRoom, reduceMotion } from "./shared/room.js";
+
+const $ = (id) => document.getElementById(id);
+const room = await createRoom($("stage"), { pointSize: 0.024, tint: 0x3e4752 });
+window.mock = room;
+$("loading").remove();
+const { box, uniforms: u, controls, THREE } = room;
+const [cx, cy] = box.centre;
+
+// Photos: the first three carry a direction (as AI placements will); the next
+// three were placed by hand (a spot, no direction); one is waiting to be placed.
+const photos = room.photos.map((p, i) => i < 3 ? p : { id: p.id, src: p.src, caption: p.caption, spot: new THREE.Vector3(p.position.x, p.position.y, 1.4) });
+const waiting = [room.data.unplaced];
+const extraPlaces = [];
+let roomName = "Octave Room";
+
+// On a tall, narrow screen the camera stands further back so the whole room fits.
+const far = Math.max(1, Math.min(1.55, 0.72 / (innerWidth / innerHeight)));
+const at = (pos, target, fov) => room.view(pos.map((v, k) => target[k] + (v - target[k]) * far), target, fov);
+const views = {
+  landing: at([cx + 3.4, cy - 6.6, 5.0], [cx, cy, 0.7], 40),
+  places: at([cx + 6, cy - 11, 9], [cx, cy, 0.6], 26),
+  room: at([cx + 0.6, cy - 5.0, 6.8], [cx, cy, 0.2], 44),
+  above: at([cx, cy - 0.01, 9.5], [cx, cy, 0], 38),
+};
+
+// Show only these layers ("plots" means every place footprint on the field).
+const show = (...ids) => document.querySelectorAll(".layer").forEach((el) =>
+  el.classList.toggle("on", ids.includes(el.id) || (ids.includes("plots") && el.classList.contains("plot"))));
+const spot = (p) => p.position || p.spot;
+
+// ---- pins and the strip ---------------------------------------------------------------
+const pinEls = new Map();
+function addPin(p, dropped = false) {
+  const b = document.createElement("button");
+  b.className = "pin" + (dropped ? " dropped" : "");
+  b.setAttribute("aria-label", p.caption);
+  b.onclick = () => openPhoto(p);
+  b.onmouseenter = () => hot(p, true);
+  b.onmouseleave = () => hot(p, false);
+  $("pins").append(b);
+  pinEls.set(p.id, b);
+}
+photos.forEach((p) => addPin(p));
+function buildStrip() {
+  const strip = $("strip");
+  strip.replaceChildren();
+  for (const p of photos) {
+    const b = document.createElement("button");
+    b.className = "thumb"; b.dataset.id = p.id;
+    b.innerHTML = `<img src="${p.src}" alt="${p.caption}">`;
+    b.onclick = () => openPhoto(p);
+    b.onmouseenter = () => hot(p, true);
+    b.onmouseleave = () => hot(p, false);
+    strip.append(b);
+  }
+  for (const w of waiting) {
+    const b = document.createElement("button");
+    b.className = "thumb waiting";
+    b.title = "Not placed yet";
+    b.innerHTML = `<img src="${w.src}" alt="${w.caption || "A photo"}, not placed yet">`;
+    b.onclick = () => startPlacing(w);
+    strip.append(b);
+  }
+  const add = document.createElement("a");
+  add.className = "add-thumb"; add.href = "#add-photos"; add.setAttribute("aria-label", "Add photos");
+  add.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 3v10M3 8h10"/></svg>`;
+  strip.append(add);
+  $("model-facts").textContent = `Filmed 18 Nov 2026. ${photos.length + waiting.length} photos`;
+  $("del-count").textContent = photos.length + waiting.length;
+}
+buildStrip();
+function hot(p, on) {
+  pinEls.get(p.id)?.classList.toggle("hot", on);
+  document.querySelector(`.thumb[data-id="${p.id}"]`)?.classList.toggle("hot", on);
+}
+
+// ---- things that follow the room on screen ------------------------------------------------
+room.onFrame(() => {
+  for (const p of photos) {
+    const s = room.project(spot(p));
+    const el = pinEls.get(p.id);
+    el.style.transform = `translate(${s.x}px, ${s.y}px)`;
+    el.hidden = !s.visible;
+  }
+  if (page === "places") {
+    const c = room.project([cx, cy, 1]);
+    Object.assign($("enter").style, { left: c.x - 150 + "px", top: c.y - 150 + "px", width: "300px", height: "300px" });
+    const l = room.project([cx, cy - box.size[1] / 2 - 0.3, 0]);
+    Object.assign($("model-label").style, { left: l.x + "px", top: l.y + 30 + "px" });
+  }
+});
+
+function buildPlots() {
+  const plots = $("plots");
+  plots.replaceChildren();
+  for (const p of extraPlaces) {
+    const a = document.createElement("a");
+    a.className = "plot layer"; a.href = "#setup"; a.onclick = () => (current = p);
+    a.innerHTML = `<span><b>${p.name}</b>No room yet</span>`;
+    plots.append(a);
+  }
+  const n = document.createElement("a");
+  n.className = "plot new-place layer"; n.href = "#new-place";
+  n.innerHTML = "<span>Film a new place</span>";
+  plots.append(n);
+}
+buildPlots();
+let current = null;
+
+// ---- pages ------------------------------------------------------------------------------
+let page = null, photoAt = null;
+const formPages = ["signup", "login", "new-place", "add-video", "add-photos", "edit-photo", "rename", "delete-place"];
+
+async function route() {
+  const name = (location.hash || "#landing").slice(1);
+  closeMenu();
+  document.body.classList.remove("pins-on", "placing");
+  document.body.classList.toggle("form-page", formPages.includes(name) || name === "setup");
+  const was = page; page = name;
+  await room.hideAllPhotos(250);
+  room.animate("near", u.nearCut, 0, 300);
+  room.animate("tint", u.tintAmount, 0, 400);
+  controls.autoRotate = false;
+
+  if (name === "landing") {
+    show("landing", "wordmark");
+    room.animate("cut", u.cut, 1.85, 900);
+    await room.flyTo(views.landing, was ? 1600 : 0, { orbit: true });
+    room.animate("shift", room.shift, innerWidth > 800 ? 0.17 : 0, 900);
+    spin(0.5);
+    return;
+  }
+  room.animate("shift", room.shift, 0, 900);
+  if (formPages.includes(name)) {
+    show(name);
+    if (name === "edit-photo" && photoAt) { $("edit-img").src = photoAt.src; $("e-cap").value = photoAt.caption || ""; }
+    if (name === "add-video" || name === "add-photos") {
+      const back = current ? "#setup" : "#room";
+      $("video-back").href = back; $("photos-back").href = back;
+      $("photos-back").lastChild.textContent = current ? current.name : roomName;
+    }
+    return;
+  }
+  if (name === "setup") {
+    const p = current || extraPlaces[0];
+    if (!p) { location.hash = "#places"; return; }
+    $("setup-name").textContent = p.name;
+    $("setup-status").textContent = p.video
+      ? `Room video added, filmed ${p.video}. Its room isn't built yet.`
+      : "No room yet. Film it once, slowly, and add the video.";
+    $("setup-video").hidden = !!p.video;
+    show("setup");
+    return;
+  }
+  if (name === "places") {
+    current = null;
+    show("places-head");
+    room.animate("cut", u.cut, 1.9, 900);
+    await room.flyTo(views.places, was === "landing" || !was ? 1800 : 1400, { orbit: true });
+    if (page !== "places") return;
+    controls.enableZoom = false; controls.enablePan = false;
+    spin(0.6);
+    show("places-head", "model-label", "enter", "plots");
+    return;
+  }
+  if (name === "room") {
+    current = null;
+    $("back-label").textContent = "Places"; $("top-back").href = "#places";
+    show("top");
+    room.animate("cut", u.cut, 1.3, 900);
+    await room.flyTo(views.room, 1700, { orbit: true });
+    if (page !== "room") return;
+    controls.enableZoom = true; controls.enablePan = false;
+    show("top", "strip");
+    document.body.classList.add("pins-on");
+  }
+}
+function spin(speed) {
+  controls.enableZoom = false; controls.enablePan = false;
+  controls.autoRotate = true; controls.autoRotateSpeed = speed;
+}
+addEventListener("hashchange", route);
+
+// ---- a photo, opened in the room --------------------------------------------------------------
+async function openPhoto(p) {
+  const from = page;
+  page = "photo"; photoAt = p;
+  document.body.classList.remove("pins-on");
+  show("top");
+  $("back-label").textContent = "Room"; $("top-back").href = "#room";
+  await room.hideAllPhotos(250);
+  document.querySelectorAll(".pin.hot").forEach((el) => el.classList.remove("hot"));
+  // With a direction: stand where the camera stood. Without one: look down at
+  // the spot from across the room, so you see where it is, not a wall.
+  const s = spot(p);
+  const view = p.position ? room.viewFor(p, 1.3)
+    : room.view([cx + (cx - s.x) * 0.5, cy + (cy - s.y) * 0.5 - 0.01, 3.7], [s.x, s.y, 0.5], 56);
+  room.animate("cut", u.cut, p.position ? 99 : 2.2, 500);
+  await room.flyTo(view, from === "photo" ? 1300 : 1900, { arc: from === "photo" || !p.position ? 0 : 1.2 });
+  if (page !== "photo" || photoAt !== p) return;
+  room.animate("tint", u.tintAmount, p.position ? 0.55 : 0.3, 700);
+  if (p.position) room.animate("near", u.nearCut, 0.7, 700);
+  else { document.body.classList.add("pins-on"); pinEls.get(p.id)?.classList.add("hot"); }
+  $("cap").textContent = p.caption || "No caption";
+  if (p.position) {
+    room.showPhoto(p, true, 700);
+    $("when").textContent = "18 Nov 2026";
+    show("top", "caption", "photo-nav");
+  } else {
+    $("card-img").src = p.src;
+    $("when").textContent = "18 Nov 2026. Placed by you";
+    show("top", "caption", "photo-nav", "card");
+  }
+}
+function step(dir) {
+  if (page !== "photo") return;
+  openPhoto(photos[(photos.indexOf(photoAt) + dir + photos.length) % photos.length]);
+}
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-step]");
+  if (t) step(Number(t.dataset.step));
+});
+addEventListener("keydown", (e) => {
+  if (e.key === "ArrowRight") step(1);
+  if (e.key === "ArrowLeft") step(-1);
+  if (e.key === "Escape") { if (page === "photo" || page === "placing") route(); closeMenu(); }
+});
+
+// ---- placing by hand ----------------------------------------------------------------------------
+let placingWhat = null;
+async function startPlacing(p) {
+  placingWhat = p;
+  page = "placing";
+  document.body.classList.remove("pins-on");
+  show("top");
+  $("ghost").querySelector("img").src = p.src;
+  room.hideAllPhotos(200);
+  room.animate("tint", u.tintAmount, 0, 400);
+  room.animate("near", u.nearCut, 0, 300);
+  room.animate("cut", u.cut, 1.6, 800);
+  await room.flyTo(views.above, 1400);
+  if (page !== "placing") return;
+  document.body.classList.add("placing", "pins-on");
+  show("top", "placing", "placing-cancel");
+}
+$("placing-cancel").onclick = () => route();
+$("move").onclick = () => startPlacing(photoAt);
+$("stage").addEventListener("pointermove", (e) => Object.assign($("ghost").style, { left: e.clientX + "px", top: e.clientY + "px" }));
+$("stage").addEventListener("click", (e) => {
+  if (page !== "placing") return;
+  const hit = room.floorAt(e.clientX, e.clientY);
+  if (!hit || hit.x < box.low[0] || hit.x > box.high[0] || hit.y < box.low[1] || hit.y > box.high[1]) return;
+  const p = placingWhat;
+  const i = waiting.indexOf(p);
+  if (i >= 0) {
+    waiting.splice(i, 1);
+    const placed = { id: p.id, src: p.src, caption: p.caption, spot: new THREE.Vector3(hit.x, hit.y, 1.4) };
+    photos.push(placed);
+    addPin(placed, true);
+  } else {
+    // Moving: a placed photo becomes a hand-placed one at the new spot.
+    const j = photos.indexOf(p);
+    const moved = { id: p.id, src: p.src, caption: p.caption, spot: new THREE.Vector3(hit.x, hit.y, 1.4) };
+    photos[j] = moved;
+    pinEls.get(p.id).remove();
+    addPin(moved, true);
+  }
+  buildStrip();
+  document.body.classList.remove("placing");
+  show("top");
+  setTimeout(route, 900);
+});
+
+// ---- the place menu ------------------------------------------------------------------------------
+function closeMenu() { $("menu").classList.remove("on"); $("menu-btn").setAttribute("aria-expanded", "false"); }
+$("menu-btn").onclick = (e) => {
+  e.stopPropagation();
+  const open = !$("menu").classList.contains("on");
+  $("menu").classList.toggle("on", open);
+  $("menu-btn").setAttribute("aria-expanded", String(open));
+};
+document.addEventListener("click", (e) => { if (!e.target.closest("#menu")) closeMenu(); });
+
+// ---- forms that change things --------------------------------------------------------------------------
+function toast(text) {
+  $("toast").textContent = text;
+  $("toast").classList.add("on");
+  setTimeout(() => $("toast").classList.remove("on"), 2600);
+}
+let picked = [];
+$("pick").onchange = () => {
+  picked = [...$("pick").files];
+  $("chosen").innerHTML = picked.map((f) => `<img src="${URL.createObjectURL(f)}" alt="">`).join("");
+};
+$("photos-save").onclick = () => {
+  const n = picked.length;
+  if (!current) {
+    for (const f of picked) waiting.push({ id: "u" + Math.random().toString(36).slice(2), src: URL.createObjectURL(f), caption: "" });
+    buildStrip();
+  }
+  picked = []; $("chosen").replaceChildren();
+  location.hash = current ? "#setup" : "#room";
+  if (n) setTimeout(() => toast(`${n} photo${n === 1 ? "" : "s"} added`), 1800);
+};
+$("np-save").onclick = () => {
+  const name = $("np-name").value.trim() || "A new place";
+  current = { name };
+  extraPlaces.push(current);
+  buildPlots();
+  $("np-name").value = "";
+  location.hash = "#setup";
+};
+$("video-save").onclick = () => {
+  if (current) current.video = "18 Nov 2026";
+  location.hash = current ? "#setup" : "#room";
+  setTimeout(() => toast("Room video added"), 600);
+};
+$("edit-save").onclick = () => {
+  if (photoAt) photoAt.caption = $("e-cap").value.trim();
+  location.hash = "#room";
+  setTimeout(() => toast("Photo updated"), 1800);
+};
+$("edit-delete").onclick = () => {
+  const j = photos.indexOf(photoAt);
+  if (j >= 0) { photos.splice(j, 1); pinEls.get(photoAt.id).remove(); }
+  buildStrip();
+  location.hash = "#room";
+  setTimeout(() => toast("Photo deleted"), 1800);
+};
+
+// ---- arrival -----------------------------------------------------------------------------------
+if (!location.hash || location.hash === "#landing") {
+  room.jump(views.landing);
+  room.shift.value = innerWidth > 800 ? 0.17 : 0;
+  u.cut.value = 1.85;
+  u.spread.value = reduceMotion ? 0 : 1;
+  room.animate("spread", u.spread, 0, 3200);
+  controls.target.set(cx, cy, 0.7); controls.enabled = true;
+  spin(0.5);
+  page = "landing";
+  setTimeout(() => show("landing", "wordmark"), reduceMotion ? 0 : 1800);
+} else {
+  room.jump(views.places);
+  route();
+}
+</script>
+</body>
+</html>

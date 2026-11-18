@@ -2,10 +2,12 @@
 
 from django.urls import path
 
-from rooms import views
+from rooms import pins, views
 
 urlpatterns = [
     path("", views.home, name="home"),
+    # The front page's public room: points only, no photos (18 Nov).
+    path("landing/room.ply", views.landing_points, name="landing_points"),
     path("places/", views.place_list, name="place_list"),
     # "new" must come before <slug>: Django takes the first line that matches,
     # and "new" would otherwise be read as a place's address word.
@@ -20,6 +22,8 @@ urlpatterns = [
     # The 3D room built from one scan, and its points file (owner only, like photos).
     path("scans/<int:pk>/room/", views.scan_room, name="scan_room"),
     path("scans/<int:pk>/points.ply", views.scan_points, name="scan_points"),
+    # Placing a photo by hand: the room page sends the spot here (18 Nov).
+    path("scans/<int:pk>/pins/", pins.pin_save, name="pin_save"),
     # Photos ("memories") follow the same pattern as scans.
     path("places/<slug:slug>/memories/new/", views.memory_create, name="memory_create"),
     path("memories/<int:pk>/photo/", views.memory_photo, name="memory_photo"),

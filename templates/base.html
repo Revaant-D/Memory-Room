@@ -1,42 +1,57 @@
-{% load static %}<!doctype html>
+{% load static backdrop %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#3e4752">
+  <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
   <title>{% block title %}Memory Room{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=Onest:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="{% static 'css/site.css' %}">
+  {# Tells the browser where "three" and its add-ons are; it must come before any module script. #}
+  <script type="importmap">
+    {"imports": {"three": "{% static 'viewer/vendor/three.module.min.js' %}", "three/addons/": "{% static 'viewer/vendor/' %}"}}
+  </script>
   {% block head %}{% endblock %}
 </head>
-<body>
-  <header class="site-header">
-    <div class="wrap site-header__row">
-      <a class="brand" href="{% url 'home' %}">Memory Room</a>
-      <nav class="site-nav" aria-label="Account">
-        {% if user.is_authenticated %}
-          <span class="site-nav__user">{{ user.get_username }}</span>
-          {# Logging out changes something, so it is a POST form, not a link. #}
-          <form method="post" action="{% url 'logout' %}">
-            {% csrf_token %}
-            <button class="button button--quiet button--small" type="submit">Log out</button>
-          </form>
-        {% else %}
-          <a href="{% url 'login' %}">Log in</a>
-          <a class="button button--small" href="{% url 'signup' %}">Sign up</a>
-        {% endif %}
-      </nav>
-    </div>
-  </header>
-
-  <main class="wrap">
-    {% if messages %}
-      <ul class="messages">
-        {% for message in messages %}
-          <li class="message{% if message.tags %} message--{{ message.tags }}{% endif %}">{{ message }}</li>
-        {% endfor %}
-      </ul>
+<body class="{% block body_class %}page{% endblock %}">
+  {% block backdrop %}
+    {# The room, faint and still, behind a form: the place's own room, or the front page's when logged out. #}
+    {% backdrop_url place as backdrop %}
+    {% if backdrop %}
+      <div id="backdrop" class="backdrop" data-points="{{ backdrop }}" aria-hidden="true"></div>
+      <script type="module" src="{% static 'site/backdrop.js' %}"></script>
     {% endif %}
+  {% endblock %}
 
-    {% block content %}{% endblock %}
-  </main>
+  {% block top %}
+    <header class="site-top">
+      <a class="wordmark" href="{% url 'home' %}">Memory Room</a>
+      {% if user.is_authenticated %}
+        {# Logging out changes something, so it is a POST form, not a link. #}
+        <form class="account" method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <span class="account__name">{{ user.get_username }}</span>
+          <button class="quiet" type="submit">Log out</button>
+        </form>
+      {% endif %}
+    </header>
+  {% endblock %}
+
+  {% block main %}
+    <main class="column">
+      {% block content %}{% endblock %}
+    </main>
+  {% endblock %}
+
+  {% if messages %}
+    <ul class="toasts" role="status">
+      {% for message in messages %}
+        <li class="toast{% if message.tags %} toast--{{ message.tags }}{% endif %}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
 </body>
 </html>

@@ -1,23 +1,47 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Your places · Memory Room{% endblock %}
+{% block body_class %}places{% endblock %}
+{% block backdrop %}{% endblock %}
 
-{% block content %}
-  <div class="page-head">
-    <h1>Your places</h1>
-    <a class="button" href="{% url 'place_create' %}">New place</a>
-  </div>
+{% block top %}
+  <header class="site-top">
+    <h1 class="places__title">Your places</h1>
+    <form class="account" method="post" action="{% url 'logout' %}">
+      {% csrf_token %}
+      <span class="account__name">{{ user.get_username }}</span>
+      <button class="quiet" type="submit">Log out</button>
+    </form>
+  </header>
+{% endblock %}
 
-  {% if places %}
-    <ul class="card-list">
-      {% for place in places %}
-        <li>
-          <a href="{{ place.get_absolute_url }}">{{ place.name }}</a>
-          <span class="meta">Created {{ place.created|date:"j M Y" }}</span>
-        </li>
+{% block main %}
+  <main class="places__field">
+    {% if models %}
+      <div class="models">
+        {% for model in models %}
+          {# The whole model is the way in. Its name sits fixed under it (bug review, M3). #}
+          <a class="model" href="{{ model.place.get_absolute_url }}" data-slug="{{ model.place.slug }}">
+            <span class="model__room" data-points="{{ model.points }}" aria-hidden="true"></span>
+            <span class="model__name">{{ model.place.name }}</span>
+            <span class="model__facts">Filmed {{ model.filmed|date:"j M Y" }}. {{ model.photos }} photo{{ model.photos|pluralize }}</span>
+          </a>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="plots{% if not models %} plots--alone{% endif %}">
+      {% for plot in plots %}
+        <a class="plot" href="{{ plot.place.get_absolute_url }}">
+          <span><b>{{ plot.place.name }}</b>{% if plot.has_room %}Open{% else %}No room yet{% endif %}</span>
+        </a>
       {% endfor %}
-    </ul>
-  {% else %}
-    <p class="empty">No places yet. A place is one room you want to keep.</p>
-  {% endif %}
+      <a class="plot" href="{% url 'place_create' %}">
+        <span>{% if models or plots %}Film a new place{% else %}Film your first place{% endif %}</span>
+      </a>
+    </div>
+  </main>
+
+  {% if models %}<script type="module" src="{% static 'site/places.js' %}"></script>{% endif %}
 {% endblock %}

@@ -6,7 +6,7 @@
 {% block title %}Page not found · Memory Room{% endblock %}
 
 {% block content %}
-  <h1>Page not found</h1>
-  <p>There is nothing at this address, or it is not yours to open.</p>
-  <p><a class="button" href="{% url 'home' %}">Go to the start</a></p>
+  <h1>Nothing here</h1>
+  <p class="meta">There is nothing at this address, or it isn’t yours to open.</p>
+  <p class="actions"><a class="act" href="{% url 'home' %}">Go to the start</a></p>
 {% endblock %}

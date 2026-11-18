@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load static %}
+
+{# A place with a built room, or one built room (/scans/<n>/room/). The page script, #}
+{# static/site/room.js, draws the room and moves the camera; this is its frame.     #}
+
+{% block title %}{{ place.name }} · Memory Room{% endblock %}
+{% block body_class %}room{% endblock %}
+{% block backdrop %}{% endblock %}
+
+{% block top %}
+  <header class="room-top">
+    {% if request.resolver_match.url_name == "scan_room" %}
+      <a class="back" id="back" href="{{ place.get_absolute_url }}" data-label="{{ place.name }}">{{ place.name }}</a>
+    {% else %}
+      <a class="back" id="back" href="{% url 'place_list' %}" data-label="Places">Places</a>
+    {% endif %}
+    <span class="room-top__name">{{ place.name }}</span>
+    <button class="icon" id="menu-button" type="button" aria-label="Place options" aria-expanded="false" aria-controls="menu">
+      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="3" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="13" cy="8" r="1.4"/></svg>
+    </button>
+  </header>
+  <nav class="menu" id="menu" aria-label="Place options" hidden>
+    <a href="{% url 'memory_create' place.slug %}">Add photos</a>
+    <a href="{% url 'scan_create' place.slug %}">Add a room video</a>
+    <div class="menu__group">
+      {% for each in scans %}
+        <div class="menu__video">
+          <span>Room filmed {{ each.taken_on|date:"j M Y" }}{% if each.status != "ready" %}, {{ each.get_status_display|lower }}{% endif %}</span>
+          <span>
+            {% if each.status == "ready" and each.pk != scan.pk %}<a href="{% url 'scan_room' each.pk %}">Open</a>{% endif %}
+            <a class="danger" href="{% url 'scan_delete' each.pk %}">Delete</a>
+          </span>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="menu__group">
+      <a href="{% url 'place_edit' place.slug %}">Rename</a>
+      <a class="danger" href="{% url 'place_delete' place.slug %}">Delete this place</a>
+    </div>
+  </nav>
+{% endblock %}
+
+{% block main %}
+  <main class="room-stage">
+    {% if made_up %}
+      <p class="made-up room-made-up"><strong>MADE-UP ROOM.</strong> Made by a stand-in for the AI model, not built from a video.</p>
+    {% endif %}
+    <div id="room" class="room-canvas" role="img" aria-label="{{ place.name }} in 3D. Drag to turn it; pinch or scroll to move closer."></div>
+    <div id="pins" class="pins"></div>
+    <p id="status" class="room-status" role="status">Loading the room</p>
+
+    <nav id="strip" class="strip" aria-label="Photos" data-add="{% url 'memory_create' place.slug %}" hidden></nav>
+
+    <section id="caption" class="caption" aria-live="polite" hidden>
+      <h2 id="caption-text"></h2>
+      <p id="caption-when"></p>
+      <p class="caption__links"><a class="quiet" id="edit" href="">Edit</a><button class="quiet" id="move" type="button">Move</button></p>
+    </section>
+    <figure id="card" class="card" hidden><img id="card-img" alt=""></figure>
+    <nav id="photo-nav" class="photo-nav" aria-label="Other photos" hidden>
+      <button class="round" id="previous" type="button" aria-label="Previous photo"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg></button>
+      <button class="round" id="next" type="button" aria-label="Next photo"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg></button>
+    </nav>
+
+    <section id="placing" class="placing" hidden>
+      <p class="placing__ask">Tap where you stood</p>
+      <p class="placing__note" id="placing-note" role="status"></p>
+      <button class="quiet" id="placing-cancel" type="button">Cancel</button>
+    </section>
+    <div id="ghost" class="ghost" hidden><img alt=""></div>
+  </main>
+
+  <input type="hidden" id="csrf" value="{{ csrf_token }}">
+  {{ room_data|json_script:"room-data" }}
+  <script type="module" src="{% static 'site/room.js' %}"></script>
+{% endblock %}

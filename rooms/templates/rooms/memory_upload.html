@@ -3,19 +3,12 @@
 {% block title %}Add photos · {{ place.name }} · Memory Room{% endblock %}
 
 {% block content %}
-  <p><a href="{{ place.get_absolute_url }}">← {{ place.name }}</a></p>
+  <a class="back" href="{{ place.get_absolute_url }}">{{ place.name }}</a>
   <h1>Add photos</h1>
-  <p class="meta">
-    Pick the photos you took in this room. You can add a caption to each one
-    afterwards. If one file is refused, none are saved: leave that one out
-    and try again.
-  </p>
-  <form class="form" method="post" enctype="multipart/form-data">
+  <p class="meta">The photos you took in this room. If one is refused, none are saved: leave it out and try again.</p>
+  <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
     {% include "includes/form_fields.html" %}
-    <p class="actions">
-      <button class="button" type="submit">Upload photos</button>
-      <a class="button button--quiet" href="{{ place.get_absolute_url }}">Cancel</a>
-    </p>
+    <p class="actions"><button class="act" type="submit">Upload photos</button></p>
   </form>
 {% endblock %}

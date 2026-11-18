@@ -129,7 +129,7 @@ class ScanPageTests(TempMediaTestCase):
         self.assertEqual(scan.place, self.place)
         self.assertEqual(scan.status, "uploaded")
         self.assertTrue(os.path.exists(scan.video.path))
-        self.assertContains(response, "· Uploaded")
+        self.assertContains(response, "Its room isn\u2019t built yet.")  # 18 Nov: was "· Uploaded"
         self.assertContains(response, "Room video added.")
 
     def test_upload_with_date(self):
@@ -182,5 +182,5 @@ class ScanPageTests(TempMediaTestCase):
 
     def test_no_scans_text(self):
         response = self.client.get("/places/dorm/")
-        self.assertContains(response, "No room video yet.")
+        self.assertContains(response, "No room yet.")  # 18 Nov: was "No room video yet."
         self.assertContains(response, 'href="/places/dorm/scans/new/"')

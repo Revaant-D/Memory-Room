@@ -2,11 +2,11 @@
 
 What has been built, where it lives, how a request moves through it, and why each decision was made. One section per piece. Each section is added when its piece is built, so anything described here exists and has been run.
 
-**Last updated:** 18 Nov 2026: chunk 5 (photos, piece 7), the room import (piece 8) and the 3D room page (piece 9).
+**Last updated:** 18 Nov 2026: the Dollhouse look (piece 10), which replaces piece 9's page; before that chunk 5 (photos, piece 7), the room import (piece 8) and the 3D room page (piece 9).
 
 ## What exists today
 
-A Django project that runs. A person can sign up, log in and log out; keep a list of places (create, open, rename, delete); add or delete a room video on each place; and add many photos to a place at once, caption them, change their dates and delete them. A room built in Colab is attached to its scan with `manage.py import_room` (piece 8) and then opens as a 3D page with its photos as dots (piece 9). Nobody can open another person's places, photos or rooms. The four tables (Place, Scan, Memory, Pin) exist with their rules and are editable in `/admin/`. Nothing in the app writes a pin yet: pins come from the admin.
+A Django project that runs. A person can sign up, log in and log out; keep a list of places (create, open, rename, delete); add or delete a room video on each place; and add many photos to a place at once, caption them, change their dates and delete them. A room built in Colab is attached to its scan with `manage.py import_room` (piece 8) and then opens as a 3D page with its photos as dots (piece 9). Nobody can open another person's places, photos or rooms. The four tables (Place, Scan, Memory, Pin) exist with their rules and are editable in `/admin/`. Since 18 Nov (piece 10) the whole site has the Dollhouse look: a place with a built room is that room, and a photo is placed by tapping the floor where it was taken; the app writes those pins.
 
 A Colab notebook that builds the 3D room from a room video exists (piece 6) but has not been run on a real video yet.
 
@@ -50,7 +50,8 @@ memory-room/
 │  ├─ 404.html                "page not found"
 │  └─ 500.html                "something went wrong"
 ├─ static/css/site.css        the one stylesheet
-├─ static/viewer/             the 3D viewer (roomviewer.js, loaders.js) and three.js in vendor/
+├─ static/viewer/             the 3D viewer (room3d.js, roomgeom.js, loaders.js) and three.js in vendor/
+├─ static/site/               one script per page (landing, places, room, backdrop) and views.js
 ├─ accounts/                  the user, sign-up, login, logout
 └─ rooms/                     places, scans, memories, pins
    ├─ models.py               the four tables and their rules
@@ -624,6 +625,8 @@ The scan number is the "Id" column in the admin site's Scans list (`/admin/rooms
 
 ## Piece 9: The 3D room page
 
+**Replaced on 18 Nov by piece 10** (the place page is now the room; `scan_room.html` and `roomviewer.js` are gone). Kept here as the record of how the first viewer worked.
+
 **Status, 18 Nov 2026:** built and tested (step C7 of the run sheet); seen in a real browser with the made-up demo room. **Not yet shown a real room, and not opened on a phone.** Built without the builder present; the calls below are listed for them.
 
 ### What it does
@@ -684,6 +687,79 @@ On a place's page, each ready scan has a "View the room in 3D" link. One page pe
 - The site has no favicon, so every page logs one 404.
 
 ---
+
+## Piece 10: The Dollhouse look (18 Nov 2026)
+
+**Built 18 Nov, by Claude, from the builder's decisions; not committed; walk-through owed.** Design: `docs/design/2026-11-18-dollhouse-site.md` (with its bug review). Plan: `docs/plans/2026-11-18-dollhouse-site.md`. Mockup the builder approved: `docs/design/mockups/a2-dollhouse-app.html`.
+
+### What it does
+
+The whole site in one look: a slate field (the colour of the builder's bedspread) with the room on it, pink (the room's own light) for photos and the main action, Gloock for names, Onest for text.
+
+| Page | Address | What it is now |
+| --- | --- | --- |
+| Front page (logged out) | `/` | The public landing room: its dots gather into the room, which turns slowly beside "Keep the room." Without a landing room, the words alone |
+| Your places | `/places/` | Each place with a built room is a small turning model of it (at most three); the others, and "Film a new place", are dashed plots |
+| A place with a built room | `/places/<slug>/` | The room, full screen, from above with the walls cut low. Placed photos are pink dots on stems; a strip holds every photo, unplaced ones dashed. Tap a photo: the camera flies to where it was taken. A ⋯ menu: add photos, add a room video, the videos, rename, delete |
+| A photo, opened | `/places/<slug>/?photo=<id>` | With a camera direction: the photo lined up in the room. Without one (hand-placed): the camera looks down at the spot and the photo shows as a card. Back closes it |
+| Placing a photo | same page | From straight above: "Tap where you stood". The tap is saved through `POST /scans/<n>/pins/` and the dot drops in |
+| A place with no room yet | `/places/<slug>/` | What's missing, by the newest video's state (uploaded, building, failed), a dashed footprint, the photos so far |
+| Every form | as before | A narrow column on the field, the room faint and blurred behind it |
+| One built room | `/scans/<n>/room/` | The same room page, for that scan |
+
+### Where the code is
+
+| File | What it is |
+| --- | --- |
+| `rooms/models.py`, `migrations/0005_pin_camera.py` | `Pin.camera`: which way the camera faced and how wide it saw (nullable; checked in `Pin.clean()`) |
+| `rooms/pins.py` | `pin_save`: place or move a photo by hand (JSON) |
+| `rooms/room_page.py` | `room_context` (everything the room page needs, one dict for `json_script`) and `points_url` |
+| `rooms/landing.py`, `management/commands/landing_room.py` | The public landing room: a thinned copy of one built room, no photos |
+| `rooms/templatetags/backdrop.py` | `{% backdrop_url place %}`: which room to draw faintly behind a page |
+| `rooms/access.py` | `get_own_built_scan` moved here from `views.py`, shared by the room page and `pin_save` |
+| `rooms/management/commands/import_room.py` | Refuses to replace a room whose scan has pins, unless `--drop-pins` |
+| `static/viewer/room3d.js` | The new viewer (replaces `roomviewer.js`): draws only while something moves, flights that a newer one can replace, the scan's frame in and out |
+| `static/viewer/roomgeom.js` | Plain geometry, tested in Node: `wallAngle`, `turnXY`/`unturnXY`, `footprint` |
+| `static/site/*.js` | One script per page: `landing`, `places`, `room`, `backdrop`; shared camera positions in `views.js` |
+| `static/css/site.css`, `templates/base.html`, all templates | The look |
+| `static/favicon.svg` | A pink dot on slate |
+
+### How placing a photo flows
+
+1. The person taps a dashed photo in the strip. `room.js` flies the camera overhead and waits for a tap (a press that moves less than 6 px).
+2. `room3d.floorAt` turns the tap into a point on the floor **in the scan's own frame**: the room is drawn turned so its walls line up with the screen, and the turn is undone here (S1). `onFloor` refuses a spot outside the room's footprint, such as the empty corner of an L-shaped room (S5).
+3. `fetch POST /scans/<n>/pins/` with `memory`, `x`, `y` and the CSRF token → `pins.pin_save` → `@login_required`, POST only → `get_own_built_scan` and `get_own_memory` (404 for anyone else's) → same place? numbers? inside the box? → `update_or_create` the pin at 1.4 m, `placed_by="user"`, `camera=None` → JSON.
+4. The page drops the dot in at the answer's spot and flies back to the room.
+
+### Decisions and why
+
+| Decision | Who, when | Why |
+| --- | --- | --- |
+| Direction A, "Dollhouse", from three mockups | **Builder, 18 Nov** | One continuous space; every move is a camera move |
+| Django's pages stay; the place page becomes the room; page-to-page moves use view transitions | **Builder, 18 Nov** | Low risk on the day the draft is due; keeps the tests |
+| The front page shows the builder's own room, thinned, with no photos | **Builder, 18 Nov** | The strongest first look; photos stay owner-only (D3) |
+| `Pin.camera` added (changes the §6 data model) | **Builder, 18 Nov** | Lined-up photos for placements that know their camera; no pins existed yet |
+| Photos placed by hand tonight; no video frames as photos | **Builder, 18 Nov** | Hand placement was decided on 17 Nov |
+| The design and its fixes S1–S8, M1–M12 | **Builder, 18 Nov** (approved) | Found in a bug review before building |
+| `import_room` refuses a scan with pins unless `--drop-pins`; taps outside the room's footprint are refused | Claude, 18 Nov (listed for the builder) | A rebuilt room has its own frame; an L-shaped room's box covers empty floor |
+| Logged out, the header is the wordmark only | Claude, 18 Nov | The front page's own buttons would otherwise be said twice |
+| Dots on thin stems down to the floor | Claude, 18 Nov | A dot floats at camera height; the stem shows where it stands (the old viewer had them for the same reason) |
+| The footprint uses every point under 2 m, not only the floor | Claude, 18 Nov | The floor under the builder's bed was never filmed |
+| Browser checks ran on a copy of the database and media | Claude, 18 Nov | Test photos and pins never touched the builder's data |
+
+### Checked
+
+- Django: 276 tests (18 Nov), of which new: `Pin.camera` rules (3), `pin_save` (12), room page data, `?photo=`, scan states, delete wording (13), `import_room` with pins (2), landing room (8), places page (3). Older tests that expected the old words were changed on purpose, each marked "18 Nov" in the test.
+- Node: 5 geometry tests (`node --test "static/viewer/tests/*.test.mjs"`). On the real room, `wallAngle` gives 74.75° (the Python check gave 74.5°) in 185 ms.
+- Chromium, on a copy of the builder's data, at 1280×800 and 390×844: every page; 7 photos uploaded through the page; a photo with a real MapAnything camera pose opens lined up; Back closes a photo; a photo placed by tapping a paper sheet comes back on that sheet after a reload (S1); taps in the L's empty corner and off the room are refused (S5); two fast taps end on the second photo (M1); Escape; Tab reaches nothing hidden (M6); a 50-photo strip starts at the left (M5); reduced motion gives cuts (M9); turning a phone re-fits the room (M12); places → room continues the camera move. No console errors except one: Chrome logs "Transition was aborted" after a file upload's redirect (the cross-fade is skipped; nothing breaks).
+
+### Known gaps
+
+- A pin can be moved but not removed.
+- A browser can keep an old copy of the page scripts after an update (seen while checking); deployment will need hashed file names (Django's `ManifestStaticFilesStorage`).
+- Placing a photo needs a pointer: there is no keyboard way to choose a spot.
+- The places page draws at most three rooms; it downloads each room's whole points file.
+- Fonts come from Google Fonts; with no internet the page falls back to Georgia and the system sans.
 
 ## Code review, 18 Nov 2026
 

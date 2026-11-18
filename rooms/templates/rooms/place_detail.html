@@ -3,63 +3,49 @@
 {% block title %}{{ place.name }} · Memory Room{% endblock %}
 
 {% block content %}
-  <p><a href="{% url 'place_list' %}">← Your places</a></p>
+  <a class="back" href="{% url 'place_list' %}">Your places</a>
+  <h1>{{ place.name }}</h1>
+  {% with newest=scans.0 %}
+    <p class="status">
+      {% if not newest %}No room yet. Film it once, slowly, and add the video.
+      {% elif newest.status == "building" %}The room is being built.
+      {% elif newest.status == "failed" %}The room couldn’t be built from this video. Try filming again, slowly, with more light.
+      {% else %}Room video added, filmed {{ newest.taken_on|date:"j M Y" }}. Its room isn’t built yet.{% endif %}
+    </p>
+  {% endwith %}
+  {# The empty floor where the room will stand: the same dashed plot as on Your places. #}
+  <div class="footprint" aria-hidden="true"></div>
+  <p class="actions">
+    <a class="act" href="{% url 'scan_create' place.slug %}">Add a room video</a>
+    <a class="quiet" href="{% url 'memory_create' place.slug %}">Add photos</a>
+  </p>
 
-  <div class="page-head">
-    <h1>{{ place.name }}</h1>
-    <span class="page-head__links">
-      <a href="{% url 'place_edit' place.slug %}">Rename</a>
-      <a class="danger-link" href="{% url 'place_delete' place.slug %}">Delete</a>
-    </span>
-  </div>
-  <p class="meta">Created {{ place.created|date:"j M Y" }}</p>
+  {% if scans %}
+    <ul class="videos">
+      {% for scan in scans %}
+        <li>Filmed {{ scan.taken_on|date:"j M Y" }} <a class="danger" href="{% url 'scan_delete' scan.pk %}">Delete</a></li>
+      {% endfor %}
+    </ul>
+  {% endif %}
 
-  <section class="section">
-    <div class="page-head">
-      <h2>Room scans</h2>
-      <a class="button button--small" href="{% url 'scan_create' place.slug %}">Add a room video</a>
-    </div>
-    {% if scans %}
-      <ul class="card-list">
-        {% for scan in scans %}
-          <li>
-            <span>Filmed {{ scan.taken_on|date:"j M Y" }} · {{ scan.get_status_display }}{% if scan.room_info.made_up %} · <strong>MADE-UP ROOM</strong> (not a reconstruction){% endif %}</span>
-            <span class="page-head__links">
-              {% if scan.status == "ready" %}
-                <a href="{% url 'scan_room' scan.pk %}">View the room in 3D</a>
-              {% endif %}
-              <a class="danger-link" href="{% url 'scan_delete' scan.pk %}">Delete</a>
-            </span>
-          </li>
-        {% endfor %}
-      </ul>
-      <p class="meta">The 3D room is built outside the app for now. When a scan is ready, it opens in 3D from here.</p>
-    {% else %}
-      <p class="empty">No room video yet.</p>
-    {% endif %}
-  </section>
+  {% if memories %}
+    <p class="count">{{ memories|length }} photo{{ memories|length|pluralize }}</p>
+    <ul class="photo-grid">
+      {% for memory in memories %}
+        <li>
+          {# Tapping a photo opens its page: caption, date, delete. #}
+          <a href="{% url 'memory_edit' memory.pk %}">
+            <img src="{{ memory.photo_address }}" loading="lazy" alt="{{ memory.caption|default:'Photo with no caption' }}">
+          </a>
+          {% if memory.caption %}<span>{{ memory.caption }}</span>{% endif %}
+          {% if memory.taken_on %}<span class="meta">{{ memory.taken_on|date:"j M Y" }}</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
 
-  <section class="section">
-    <div class="page-head">
-      <h2>Photos{% if memories %} ({{ memories|length }}){% endif %}</h2>
-      <a class="button button--small" href="{% url 'memory_create' place.slug %}">Add photos</a>
-    </div>
-    {% if memories %}
-      <ul class="photo-grid">
-        {% for memory in memories %}
-          <li>
-            {# Tapping a photo opens its page: caption, date, delete. #}
-            <a href="{% url 'memory_edit' memory.pk %}">
-              <img src="{{ memory.photo_address }}" loading="lazy"
-                   alt="{{ memory.caption|default:'Photo with no caption' }}">
-            </a>
-            <span>{{ memory.caption|default:"(no caption)" }}</span>
-            <span class="meta">{{ memory.taken_on|date:"j M Y"|default:"no date" }}</span>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <p class="empty">No photos yet.</p>
-    {% endif %}
-  </section>
+  <p class="place-links">
+    <a href="{% url 'place_edit' place.slug %}">Rename</a>
+    <a class="danger" href="{% url 'place_delete' place.slug %}">Delete this place</a>
+  </p>
 {% endblock %}

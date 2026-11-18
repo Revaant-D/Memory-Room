@@ -172,6 +172,24 @@ class Memory(models.Model):
 # --- Pin --------------------------------------------------------------------
 
 
+def _is_number(value):
+    """A real, finite number. True and False are not numbers here."""
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def _is_camera(camera):
+    """True for {"rotation": three rows of three numbers, "vfov": 1 < degrees < 179}."""
+    if not isinstance(camera, dict):
+        return False
+    rotation, vfov = camera.get("rotation"), camera.get("vfov")
+    rows_ok = (
+        isinstance(rotation, list)
+        and len(rotation) == 3
+        and all(isinstance(row, list) and len(row) == 3 and all(map(_is_number, row)) for row in rotation)
+    )
+    return rows_ok and _is_number(vfov) and 1 < vfov < 179
+
+
 class Pin(models.Model):
     """Where one photo sits inside one scan.
 
@@ -190,6 +208,12 @@ class Pin(models.Model):
     y = models.FloatField()
     z = models.FloatField()
     placed_by = models.CharField(max_length=4, choices=PlacedBy.choices)
+    # Which way the camera faced and how wide it saw, when known (added 18 Nov
+    # 2026, the builder's decision): {"rotation": 3x3 camera-to-room rotation in
+    # this scan's frame, OpenCV camera axes as in cameras.json, "vfov": degrees}.
+    # A placement that knows it (the AI's) opens with the photo lined up with
+    # the room. A pin placed by hand has none: a tap gives a spot, not a facing.
+    camera = models.JSONField(null=True, blank=True)
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -213,6 +237,11 @@ class Pin(models.Model):
             if value is not None and not math.isfinite(value):
                 errors.append("A pin's position must be three real numbers.")
                 break
+        # Rule 3: a camera, when there is one, is a 3x3 rotation and a field of view.
+        if self.camera is not None and not _is_camera(self.camera):
+            errors.append(
+                "A pin's camera must be a 3×3 rotation and a field of view between 1 and 179 degrees."
+            )
         if errors:
             raise ValidationError(errors)
 

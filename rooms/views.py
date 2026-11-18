@@ -15,30 +15,66 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
-from rooms.access import get_own_memory, get_own_place, get_own_scan
+from rooms.access import get_own_built_scan, get_own_memory, get_own_place, get_own_scan
 from rooms.forms import MemoryForm, MemoryUploadForm, PlaceForm, ScanForm
-from rooms.models import Memory, Place, Scan
+from rooms.landing import landing_exists, landing_path
+from rooms.models import Memory, Place
 from rooms.photos import photo_taken_on
+from rooms.room_page import points_url, room_context
 
 # The only types a photo file is ever served as (see memory_photo).
 PHOTO_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
 
 
 def home(request):
-    """The front page. A logged-in person goes straight to their places."""
+    """The front page. A logged-in person goes straight to their places.
+
+    Logged out, it shows the public landing room when one is set up
+    (rooms/landing.py), and the same words on the plain field when not.
+    """
     if request.user.is_authenticated:
         return redirect("place_list")
-    return render(request, "rooms/home.html")
+    landing = reverse("landing_points") if landing_exists() else None
+    return render(request, "rooms/home.html", {"landing": landing})
+
+
+def landing_points(request):
+    """The landing room's points, to anyone: no login, no photos (18 Nov)."""
+    if not landing_exists():
+        raise Http404("No landing room is set up.")
+    response = FileResponse(open(landing_path(), "rb"), content_type="application/octet-stream")
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
 
 
 # --- Places -----------------------------------------------------------------
 
 
+# How many rooms the places page draws in 3D. Each one downloads its whole
+# points file, so the rest are listed as plots (design call 5, 18 Nov).
+MAX_MODELS = 3
+
+
 @login_required
 def place_list(request):
-    """Every place that belongs to the logged-in user, newest first."""
-    places = Place.objects.filter(owner=request.user)
-    return render(request, "rooms/place_list.html", {"places": places})
+    """Every place that belongs to the logged-in user, newest first.
+
+    A place with a built room is drawn as a small model of that room; the
+    others (and any past the first three) are dashed plots on the field.
+    """
+    models, plots = [], []
+    for place in Place.objects.filter(owner=request.user):
+        scan = place.newest_ready_scan()
+        if scan and len(models) < MAX_MODELS:
+            models.append({
+                "place": place,
+                "points": points_url(scan),
+                "filmed": scan.taken_on,
+                "photos": place.memories.count(),
+            })
+        else:
+            plots.append({"place": place, "has_room": scan is not None})
+    return render(request, "rooms/place_list.html", {"models": models, "plots": plots})
 
 
 @login_required
@@ -59,8 +95,12 @@ def place_create(request):
 
 @login_required
 def place_detail(request, slug):
-    """One place: its room scans and its photos."""
+    """One place. With a built room, the place page is that room in 3D, with
+    its photos; before then, what is missing and the photos so far."""
     place = get_own_place(request.user, slug)
+    scan = place.newest_ready_scan()
+    if scan:
+        return render(request, "rooms/room.html", room_context(scan, request.GET.get("photo")))
     context = {
         "place": place,
         "scans": place.scans.all(),  # most recently filmed first (Scan.Meta.ordering)
@@ -132,57 +172,22 @@ def scan_delete(request, pk):
         scan.delete()  # rooms/signals.py removes the video from disk
         messages.success(request, "Room video deleted.")
         return redirect(place)
-    return render(request, "rooms/scan_confirm_delete.html", {"scan": scan, "place": place})
-
-
-def _get_own_built_scan(user, pk):
-    """This user's scan, if its 3D room has been built; otherwise 404."""
-    scan = get_own_scan(user, pk)
-    if scan.status != Scan.Status.READY or not scan.points_file:
-        raise Http404("This room has not been built yet.")
-    return scan
+    # A scan's pins go with it (Pin -> Scan is CASCADE): say how many photos
+    # lose their place in the room, instead of "your photos stay" (S3, 18 Nov).
+    context = {"scan": scan, "place": place, "lost": scan.pins.count()}
+    return render(request, "rooms/scan_confirm_delete.html", context)
 
 
 @login_required
 def scan_room(request, pk):
-    """The 3D room built from one scan, with its placed photos as dots.
+    """One built room in 3D, with its placed photos as dots.
 
-    The page itself is light: the room's points are fetched by the browser
-    from scan_points below, and drawn by static/viewer/roomviewer.js.
+    The place page shows the newest built room the same way; this address
+    shows any one of them. The page is light: the browser fetches the points
+    from scan_points below and draws them with static/viewer/room3d.js.
     """
-    scan = _get_own_built_scan(request.user, pk)
-    pins = [
-        {
-            "id": pin.pk,
-            "x": pin.x,
-            "y": pin.y,
-            "z": pin.z,
-            "placedBy": pin.placed_by,
-            "label": pin.memory.caption or "Photo with no caption",
-            "photo": pin.memory.photo_address(),
-            "page": reverse("memory_edit", kwargs={"pk": pin.memory_id}),
-        }
-        for pin in scan.pins.select_related("memory").order_by("pk")
-    ]
-    # Handed to the page's script as JSON (json_script in the template), so a
-    # caption can never be read as code.
-    # The file's own random name is added to the address, so the address changes
-    # whenever a room is imported again, and a browser never draws an older
-    # room (a made-up one, say) from its cache. The view ignores it.
-    version = os.path.basename(scan.points_file.name).split("-")[0]
-    room_data = {
-        "points": reverse("scan_points", kwargs={"pk": scan.pk}) + f"?v={version}",
-        "box": scan.room_info.get("box"),
-        "pins": pins,
-    }
-    n_points = scan.room_info.get("n_points")
-    return render(request, "rooms/scan_room.html", {
-        "scan": scan,
-        "place": scan.place,
-        "made_up": scan.room_info.get("made_up") is True,
-        "points_text": f"{n_points:,} points" if isinstance(n_points, int) else "",
-        "room_data": room_data,
-    })
+    scan = get_own_built_scan(request.user, pk)
+    return render(request, "rooms/room.html", room_context(scan, request.GET.get("photo")))
 
 
 @login_required
@@ -192,7 +197,7 @@ def scan_points(request, pk):
     Like memory_photo: nothing serves media/ directly, so the file is only
     reachable through this owner check.
     """
-    scan = _get_own_built_scan(request.user, pk)
+    scan = get_own_built_scan(request.user, pk)
     try:
         file = open(scan.points_file.path, "rb")
     except (FileNotFoundError, ValueError):

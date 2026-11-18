@@ -14,8 +14,8 @@ from pathlib import Path
 
 from django.core.management import CommandError, call_command
 
-from rooms.models import Place, Scan
-from rooms.tests.utils import TempMediaTestCase, make_user, video_file
+from rooms.models import Memory, Pin, Place, Scan
+from rooms.tests.utils import TempMediaTestCase, jpeg_file, make_user, video_file
 
 REAL_MODEL = "facebook/map-anything-apache"
 STAND_IN = "MADE-UP ROOM: stand-in model, not a reconstruction"
@@ -174,6 +174,36 @@ class ImportRoomTests(TempMediaTestCase):
         self.assertNotEqual(Path(self.scan.points_file.path), first)
         self.assertTrue(Path(self.scan.points_file.path).exists())
         self.assertFalse(first.exists())
+
+    # --- a scan that already has pins (S2, 18 Nov) ---
+
+    def place_two_photos(self):
+        for _ in range(2):
+            memory = Memory.objects.create(place=self.place, photo=jpeg_file())
+            Pin.objects.create(memory=memory, scan=self.scan, x=1.0, y=1.0, z=1.4, placed_by="user")
+
+    def test_refuses_when_the_scan_has_pins(self):
+        # A rebuilt room has its own frame, so the old spots would point at the wrong places.
+        self.run_command(self.scan.pk, self.write_room())
+        self.scan.refresh_from_db()
+        before = self.scan.points_file.name
+        self.place_two_photos()
+        with self.assertRaises(CommandError) as caught:
+            self.run_command(self.scan.pk, self.write_room())
+        self.assertIn(f"Scan {self.scan.pk} has 2 placed photos", str(caught.exception))
+        self.assertIn("--drop-pins", str(caught.exception))
+        self.scan.refresh_from_db()
+        self.assertEqual(self.scan.points_file.name, before)
+        self.assertEqual(Pin.objects.count(), 2)
+
+    def test_drop_pins_replaces_and_deletes_them(self):
+        self.run_command(self.scan.pk, self.write_room())
+        self.place_two_photos()
+        out = self.run_command(self.scan.pk, self.write_room(), "--drop-pins")
+        self.assert_imported()
+        self.assertEqual(Pin.objects.count(), 0)
+        self.assertEqual(Memory.objects.count(), 2)  # the photos stay; only their spots go
+        self.assertIn("2 placed photos lost their place", out)
 
     # --- refusals ---
 

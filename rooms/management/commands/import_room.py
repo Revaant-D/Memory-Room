@@ -34,12 +34,28 @@ class Command(BaseCommand):
             action="store_true",
             help="allow a room made by the stand-in model; every page will label it MADE-UP ROOM",
         )
+        parser.add_argument(
+            "--drop-pins",
+            action="store_true",
+            help="replace a room whose scan has placed photos, and delete those placements",
+        )
 
-    def handle(self, scan_id, room, made_up, **options):
+    def handle(self, scan_id, room, made_up, drop_pins=False, **options):
         try:
             scan = Scan.objects.get(pk=scan_id)
         except Scan.DoesNotExist:
             raise CommandError(f"No scan number {scan_id}. The admin site lists scans with their numbers.")
+
+        # A rebuilt room has its own frame (a re-levelled one does), so the spots
+        # of photos placed in the old room would point at the wrong places.
+        # Refuse unless asked to drop them (S2, 18 Nov).
+        placed = scan.pins.count()
+        if placed and not drop_pins:
+            raise CommandError(
+                f"Scan {scan.pk} has {placed} placed photo{'s' if placed != 1 else ''}. A new room "
+                f"would put them in the wrong places. Run again with --drop-pins to replace the "
+                f"room and remove those placements (the photos stay)."
+            )
 
         points = tempfile.TemporaryFile()  # removed when closed
         try:
@@ -73,6 +89,10 @@ class Command(BaseCommand):
             raise
         if old:
             scan.points_file.storage.delete(old)  # a room imported again replaces the old one
+        if placed:
+            scan.pins.all().delete()
+            self.stdout.write(f"{placed} placed photo{'s' if placed != 1 else ''} lost their place; "
+                              f"place them again in the new room.")
 
         if info["made_up"]:
             self.stdout.write("MADE-UP ROOM (stand-in model, not a reconstruction). Pages will say so.")

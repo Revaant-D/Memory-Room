@@ -1,0 +1,11 @@
+/* Mockup-only: switch between the three directions. Not part of any design. */
+.mockup-switch {
+  position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; gap: 2px;
+  padding: 3px; border-radius: 8px; background: rgba(128, 128, 128, .28);
+  font: 600 12px/1 system-ui, sans-serif;
+}
+.mockup-switch a {
+  display: grid; place-items: center; width: 26px; height: 26px; border-radius: 6px;
+  color: inherit; text-decoration: none; opacity: .7;
+}
+.mockup-switch a[aria-current] { background: rgba(255, 255, 255, .85); color: #222; opacity: 1; }

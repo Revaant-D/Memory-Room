@@ -5,16 +5,19 @@
 {% block title %}{% if place %}Rename {{ place.name }}{% else %}New place{% endif %} · Memory Room{% endblock %}
 
 {% block content %}
-  <h1>{% if place %}Rename place{% else %}New place{% endif %}</h1>
-  <form class="form" method="post">
+  {% if place %}
+    <a class="back" href="{{ place.get_absolute_url }}">{{ place.name }}</a>
+    <h1>Rename</h1>
+  {% else %}
+    <a class="back" href="{% url 'place_list' %}">Your places</a>
+    <h1>A new place</h1>
+  {% endif %}
+  <form method="post">
     {% csrf_token %}
     {% include "includes/form_fields.html" %}
-    {% if place %}
-      <p class="meta">Renaming does not change the place's address.</p>
-    {% endif %}
+    {% if place %}<p class="meta">Its address stays the same.</p>{% endif %}
     <p class="actions">
-      <button class="button" type="submit">{% if place %}Save name{% else %}Create place{% endif %}</button>
-      <a class="button button--quiet" href="{% if place %}{{ place.get_absolute_url }}{% else %}{% url 'place_list' %}{% endif %}">Cancel</a>
+      <button class="act" type="submit">{% if place %}Save name{% else %}Create place{% endif %}</button>
     </p>
   </form>
 {% endblock %}

@@ -1,24 +1,26 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block content %}
-  <section class="hero">
-    <h1>Keep the room, not only the photos.</h1>
-    <p class="lead">
-      Memory Room is for a place you are about to leave. Film the room once on
-      your phone and add the photos you took there.
+{% block body_class %}landing{% endblock %}
+
+{# The front page draws its own room, full size, so no faint one behind it. #}
+{% block backdrop %}{% endblock %}
+
+{% block top %}
+  <header class="site-top"><span class="wordmark">Memory Room</span></header>
+{% endblock %}
+
+{% block main %}
+  {% if landing %}
+    <div id="landing-room" class="landing__room" data-points="{{ landing }}" aria-hidden="true"></div>
+  {% endif %}
+  <main class="landing__words{% if landing %} landing__words--late{% endif %}">
+    <h1>Keep the room.</h1>
+    <p>Film a place once on your phone. It comes back as a room you can walk through, with your photos where you took them.</p>
+    <p class="actions">
+      <a class="act" href="{% url 'signup' %}">Sign up</a>
+      <a class="quiet" href="{% url 'login' %}">Log in</a>
     </p>
-    <p class="note">
-      This is an early version. Today you can make an account, keep a list of
-      your places, and add a room video and photos to each. The 3D room is not
-      built yet.
-    </p>
-    {% if user.is_authenticated %}
-      <p>You are logged in as <strong>{{ user.get_username }}</strong>.</p>
-    {% else %}
-      <p class="actions">
-        <a class="button" href="{% url 'signup' %}">Sign up</a>
-        <a class="button button--quiet" href="{% url 'login' %}">Log in</a>
-      </p>
-    {% endif %}
-  </section>
+  </main>
+  {% if landing %}<script type="module" src="{% static 'site/landing.js' %}"></script>{% endif %}
 {% endblock %}

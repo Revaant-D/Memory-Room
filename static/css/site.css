@@ -1,151 +1,265 @@
-/* Memory Room: the one stylesheet.
-   Written for a phone first; wider screens get the same column, centred. */
+/* Memory Room: the one stylesheet. The Dollhouse look (18 Nov 2026).
+
+   The site is one slate field, the colour of the builder's bedspread, with
+   the room on it. Pink is the room's own light and means "a memory": the main
+   action on a page, and the photos in the room. Gloock is for names and
+   titles; Onest for everything else. Phone first. */
 
 :root {
-  --ink: #1d1b19;
-  --ink-soft: #5f5a54;
-  --paper: #faf8f5;
-  --card: #ffffff;
-  --line: #e2ddd5;
-  --accent: #2f5d50;
-  --accent-ink: #ffffff;
-  --danger: #a3341f;
-  --ok-bg: #e5f1ea;
-  --error-bg: #f9e4df;
-  --warn-bg: #fdf1d6;
-  --radius: 8px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ink: #eeeae4;
-    --ink-soft: #a9a39a;
-    --paper: #171614;
-    --card: #211f1c;
-    --line: #37332e;
-    --accent: #7fbfa9;
-    --accent-ink: #12211c;
-    --danger: #f08c75;
-    --ok-bg: #1d3028;
-    --error-bg: #3a211c;
-    --warn-bg: #3a3118;
-  }
+  --field: #3e4752;
+  --field-lit: #4c5663;
+  --field-deep: #343c46;
+  --ink: #eef0f2;
+  --ink-soft: #a9b2bc;
+  --memory: #ff6fae;
+  --memory-ink: #2a1220;
+  --danger: #ff9b8a;
+  --line: rgba(238, 240, 242, .22);
+  --line-strong: rgba(238, 240, 242, .45);
+  --serif: Gloock, Georgia, serif;
+  --sans: Onest, system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
+/* "hidden" must win over any display a class gives (bug review, M2). */
+[hidden] { display: none !important; }
 
+/* Moving between pages fades one into the next instead of flashing (Chrome, Edge, Safari). */
+@view-transition { navigation: auto; }
+
+html { background: var(--field); }
 body {
   margin: 0;
-  background: var(--paper);
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: radial-gradient(ellipse 70% 60% at 50% 55%, var(--field-lit), var(--field) 70%) fixed;
   color: var(--ink);
-  font: 1rem/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 400 1rem/1.55 var(--sans);
+  -webkit-font-smoothing: antialiased;
 }
 
-.wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
-main.wrap { padding-top: 20px; padding-bottom: 48px; }
+a { color: inherit; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--memory); outline-offset: 4px; border-radius: 4px; }
+h1, h2 { font-family: var(--serif); font-weight: 400; letter-spacing: -.01em; }
+h1 { font-size: clamp(2rem, 6vw, 2.8rem); line-height: 1.02; margin: 6px 0 22px; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; }
 
-h1 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 12px; }
-h2 { font-size: 1.15rem; margin: 28px 0 8px; }
-a { color: var(--accent); }
-
-/* Header */
-.site-header { background: var(--card); border-bottom: 1px solid var(--line); }
-.site-header__row {
-  display: flex; flex-wrap: wrap; align-items: center;
-  justify-content: space-between; gap: 8px 16px; min-height: 56px;
+/* --- actions: one pink pill for the main thing, underlined text for the rest --- */
+.act {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 22px;
+  border-radius: 999px; background: var(--memory); color: var(--memory-ink); font-weight: 600; text-decoration: none;
 }
-.brand { font-weight: 700; color: var(--ink); text-decoration: none; }
-.site-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
-.site-nav form { margin: 0; }
-.site-nav__user { color: var(--ink-soft); overflow-wrap: anywhere; }
-
-/* Buttons. A link and a real button look the same. */
-.button {
-  display: inline-block; padding: 10px 16px; min-height: 44px;
-  border: 1px solid var(--accent); border-radius: var(--radius);
-  background: var(--accent); color: var(--accent-ink);
-  font: inherit; font-weight: 600; text-decoration: none; cursor: pointer;
+.act:hover { filter: brightness(1.06); }
+.act--danger { background: var(--danger); }
+.quiet {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; color: var(--ink);
+  text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--line-strong);
 }
-.button--quiet { background: transparent; color: var(--accent); }
-.button--small { padding: 6px 12px; min-height: 36px; font-weight: 500; }
-.button:focus-visible, a:focus-visible, input:focus-visible {
-  outline: 3px solid var(--accent); outline-offset: 2px;
-}
+.quiet:hover { text-decoration-color: var(--ink); }
+.danger { color: var(--danger); text-decoration-color: rgba(255, 155, 138, .5); }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin: 26px 0 0; }
+.back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--ink-soft); text-decoration: none; }
+.back::before { content: ""; width: 7px; height: 7px; border-left: 1.6px solid; border-bottom: 1.6px solid; transform: rotate(45deg); }
+.back:hover { color: var(--ink); }
+.meta, .status { color: var(--ink-soft); }
 
-/* Messages shown once after an action */
-.messages { list-style: none; margin: 0 0 16px; padding: 0; }
-.message {
-  padding: 10px 14px; margin-bottom: 8px;
-  border-radius: var(--radius); background: var(--ok-bg);
+/* --- the frame of an ordinary page --- */
+.site-top {
+  position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 14px clamp(16px, 6vw, 80px);
 }
-.message--error { background: var(--error-bg); }
+.wordmark { font-family: var(--serif); font-size: 1.15rem; text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+.account { display: flex; align-items: center; gap: 12px; margin: 0; }
+.account__name { color: var(--ink-soft); overflow-wrap: anywhere; }
+.column { position: relative; z-index: 1; max-width: 26rem; margin: 0 auto; padding: clamp(20px, 7vh, 80px) 16px 72px; }
+.column--wide { max-width: 44rem; }
 
-/* Home page */
-.hero { padding: 24px 0; }
-.lead { font-size: 1.1rem; }
-.note { color: var(--ink-soft); }
-.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+/* The room, faint and still, behind a form (static/site/backdrop.js). */
+.backdrop { position: fixed; inset: 0; z-index: 0; opacity: .16; filter: blur(2px); pointer-events: none; }
 
-/* Forms */
-.form { max-width: 420px; }
-.field { margin-bottom: 16px; }
-.field label { display: block; font-weight: 600; margin-bottom: 4px; }
-.field input {
-  width: 100%; padding: 10px 12px; min-height: 44px;
-  border: 1px solid var(--line); border-radius: var(--radius);
-  background: var(--card); color: var(--ink);
-  font: inherit; font-size: 1rem; /* 16px or more stops phones zooming in */
+/* --- forms --- */
+.field { margin-bottom: 18px; }
+.field label { display: block; color: var(--ink-soft); font-size: .92rem; margin-bottom: 6px; }
+.field input:not([type=file]):not([type=checkbox]), .field textarea, .field select {
+  width: 100%; min-height: 48px; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--line-strong);
+  background: rgba(0, 0, 0, .14); color: var(--ink); font: inherit; font-size: 1rem; /* 16px stops phones zooming */
 }
-.field .help { color: var(--ink-soft); font-size: 0.9rem; margin: 4px 0 0; }
+.field input:focus, .field textarea:focus { border-color: var(--ink); outline: none; }
+.field input[type=file] {
+  width: 100%; padding: 26px 16px; border: 1.5px dashed var(--line-strong); border-radius: 10px;
+  color: var(--ink-soft); font: inherit; cursor: pointer;
+}
+.field input[type=file]:hover { border-color: var(--ink); }
+.field input[type=file]::file-selector-button {
+  margin-right: 14px; min-height: 40px; padding: 0 18px; border: 0; border-radius: 999px;
+  background: var(--ink); color: var(--field); font: 600 .95rem var(--sans); cursor: pointer;
+}
+.field .help { color: var(--ink-soft); font-size: .88rem; margin: 6px 0 0; }
 .field .help ul { margin: 4px 0 0; padding-left: 18px; }
-.errorlist {
-  list-style: none; margin: 4px 0 8px; padding: 0;
-  color: var(--danger); font-weight: 600;
-}
-.form-footer { margin-top: 20px; color: var(--ink-soft); }
+.errorlist { list-style: none; margin: 4px 0 8px; padding: 0; color: var(--danger); font-weight: 500; }
+.form-footer { margin-top: 26px; color: var(--ink-soft); }
 
-/* Pages that list things: places, and what is inside a place */
-.page-head {
-  display: flex; flex-wrap: wrap; align-items: center;
-  justify-content: space-between; gap: 8px 16px; margin-bottom: 12px;
-}
-.page-head h1, .page-head h2 { margin: 0; overflow-wrap: anywhere; }
-.page-head__links { display: flex; flex-wrap: wrap; gap: 6px 16px; }
-.section { margin-top: 28px; }
-.meta, .empty { color: var(--ink-soft); }
-.card-list { list-style: none; margin: 0; padding: 0; }
-.card-list li {
-  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px;
-  padding: 12px 14px; margin-bottom: 8px; overflow-wrap: anywhere;
-  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
-}
-.button--danger { background: var(--danger); border-color: var(--danger); color: var(--card); }
-.danger-link { color: var(--danger); }
-
-/* Photos: a grid of squares on the place page, one large photo on its own page */
-.photo-grid {
-  list-style: none; margin: 0; padding: 0;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;
-}
-.photo-grid li { display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
-.photo-grid img {
-  display: block; width: 100%; aspect-ratio: 1; object-fit: cover;
-  border-radius: var(--radius); background: var(--line);
-}
-.photo-large {
-  display: block; max-width: 100%; max-height: 60vh; margin-bottom: 16px;
-  border-radius: var(--radius); background: var(--line);
+/* --- photos on ordinary pages --- */
+.photo-large { display: block; width: 100%; max-height: 46vh; object-fit: contain; margin: 0 0 22px; border-radius: 6px; background: rgba(0, 0, 0, .15); }
+.count { color: var(--ink-soft); margin: 34px 0 10px; }
+.photo-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+.photo-grid li { display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; font-size: .92rem; }
+.photo-grid img { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 5px; background: var(--field-deep); }
+.videos { list-style: none; margin: 26px 0 0; padding: 0; color: var(--ink-soft); }
+.videos li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+.place-links { display: flex; gap: 18px; margin-top: 40px; }
+.place-links a { color: var(--ink-soft); }
+.made-up { color: var(--ink); background: rgba(255, 155, 138, .16); border-radius: 8px; padding: 8px 12px; font-size: .92rem; }
+.footprint {
+  width: min(420px, 100%); aspect-ratio: 4 / 3; margin: 6px 0 30px; border: 1.5px dashed var(--line-strong); border-radius: 10px;
+  transform: perspective(700px) rotateX(48deg); transform-origin: bottom;
 }
 
-/* The 3D room page: the room fills the column; the chosen photo shows below it */
-.room-view {
-  width: 100%; height: min(62vh, 560px);
-  border-radius: var(--radius); overflow: hidden; background: #15151a; touch-action: none;
+/* --- messages after an action: a pill at the bottom that fades away --- */
+.toasts { position: fixed; z-index: 20; left: 50%; bottom: 120px; transform: translateX(-50%); list-style: none; margin: 0; padding: 0;
+          display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; }
+.toast { background: var(--ink); color: var(--field); padding: 10px 18px; border-radius: 999px; font-weight: 500;
+         animation: toast 4.6s ease forwards; }
+.toast--error { background: var(--danger); }
+@keyframes toast { 0% { opacity: 0; transform: translateY(8px); } 6%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes toast-fade { 0%, 85% { opacity: 1; } 100% { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation-duration: .01ms !important; }
+  /* Still fade the message away (opacity only, no movement), or it would stay on screen. */
+  .toast { animation: toast-fade 4.6s ease forwards !important; }
+  @view-transition { navigation: none; }
 }
-.room-actions { margin-top: 12px; }
-.button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
-.notice-warn { background: var(--warn-bg); border-radius: var(--radius); padding: 10px 14px; }
-.pin-detail { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; margin-top: 12px; }
-.pin-detail[hidden] { display: none; }
-.pin-detail img { width: 140px; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius); background: var(--line); }
-.pin-detail p { margin: 0 0 6px; overflow-wrap: anywhere; }
+
+/* --- the front page (rooms/home.html, static/site/landing.js) --- */
+.landing .site-top { position: fixed; top: 0; left: 0; right: 0; }
+.landing__room { position: fixed; inset: 0; }
+.landing__words { position: fixed; z-index: 1; left: clamp(16px, 6vw, 80px); right: 16px; bottom: clamp(28px, 9vh, 96px); max-width: 30rem; }
+.landing__words h1 { font-size: clamp(2.8rem, 8vw, 5.2rem); line-height: .95; margin: 0 0 22px; }
+.landing__words p { color: var(--ink-soft); max-width: 22rem; }
+.landing__words .actions { margin-top: 28px; }
+/* With a room to gather first, the words come in after it (CSS, so no timer can go stale: M8). */
+.landing__words--late { animation: words-in .8s ease 1.8s both; }
+@keyframes words-in { from { opacity: 0; transform: translateY(10px); } }
+@media (prefers-reduced-motion: reduce) { .landing__words--late { animation: none; } }
+
+/* --- your places (rooms/place_list.html, static/site/places.js) --- */
+.places__title { font-size: 1.6rem; margin: 0; }
+.places__field {
+  min-height: calc(100dvh - 72px); display: flex; align-items: center; justify-content: center;
+  gap: clamp(24px, 5vw, 72px); flex-wrap: wrap; padding: 0 clamp(16px, 6vw, 80px) 40px;
+}
+.models { flex: 1 1 520px; display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; }
+.model { flex: 1 1 280px; max-width: 760px; display: flex; flex-direction: column; align-items: center; text-decoration: none; border-radius: 14px; }
+.model__room { display: block; width: 100%; height: min(58vh, 560px); }
+.models:has(.model + .model) .model__room { height: min(42vh, 380px); }
+.model__room--missing { border: 1.5px dashed var(--line-strong); border-radius: 10px; }
+.model__name { font-family: var(--serif); font-size: clamp(1.7rem, 3.6vw, 2.4rem); line-height: 1; margin-top: 4px; }
+.model__facts { color: var(--ink-soft); font-size: .92rem; }
+.model:hover .model__name { text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 1px; }
+.plots { display: flex; flex-direction: column; gap: 26px; }
+.plots--alone { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+/* A plot: the dashed floor of a place with no room on it yet. */
+.plot {
+  width: 160px; height: 112px; display: grid; place-items: center; text-align: center; text-decoration: none;
+  border: 1.5px dashed var(--line-strong); border-radius: 6px; transform: skewX(-18deg); color: var(--ink-soft);
+}
+.plot > span { transform: skewX(18deg); font-size: .92rem; line-height: 1.3; padding: 0 10px; }
+.plot b { display: block; font-family: var(--serif); font-weight: 400; color: var(--ink); font-size: 1.2rem; overflow-wrap: anywhere; }
+.plot:hover { border-color: var(--ink); color: var(--ink); }
+@media (max-width: 600px) {
+  .places__title { font-size: 1.35rem; }
+  .places__field { align-items: flex-start; padding-top: 8px; }
+  .model__room { height: 44vh; }
+  .plots { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 14px; }
+  .plot { width: 128px; height: 86px; }
+}
+
+/* --- the room (rooms/room.html, static/site/room.js) --- */
+.room { overflow: hidden; height: 100vh; height: 100dvh; }
+.room-canvas { position: fixed; inset: 0; }
+.room-top { position: fixed; z-index: 5; top: 12px; left: 16px; right: 16px; display: flex; align-items: center; gap: 16px; }
+.room-top__name { font-family: var(--serif); font-size: clamp(1.3rem, 3vw, 1.7rem); line-height: 1; margin-right: auto; overflow-wrap: anywhere; }
+.icon { width: 44px; height: 44px; flex: none; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); }
+.icon:hover, .icon[aria-expanded="true"] { border-color: var(--ink); }
+.icon svg { width: 18px; height: 18px; }
+.menu {
+  position: fixed; z-index: 6; top: 64px; right: 16px; width: min(320px, calc(100% - 32px)); padding: 8px;
+  background: var(--field-deep); border-radius: 10px; box-shadow: 0 18px 50px rgba(0, 0, 0, .35);
+}
+.menu:not([hidden]) { animation: menu-in .18s ease; }
+@keyframes menu-in { from { opacity: 0; transform: scale(.97); } }
+.menu a { display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 6px; text-decoration: none; }
+.menu a:hover { background: rgba(255, 255, 255, .06); }
+.menu__group { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px; }
+.menu__video { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 0 0 0 12px; color: var(--ink-soft); font-size: .92rem; }
+.menu__video span:last-child { display: flex; }
+.menu__video a { min-height: 40px; padding: 0 8px; }
+.room-made-up { position: fixed; z-index: 4; top: 64px; left: 16px; max-width: min(30rem, calc(100% - 32px)); margin: 0; }
+.room-status { position: fixed; inset: 0; display: grid; place-items: center; margin: 0; color: var(--ink-soft); }
+
+/* Photos in the room: pink dots, the room's own light. */
+.pins { position: fixed; inset: 0; pointer-events: none; z-index: 3; }
+.pin { position: absolute; left: 0; top: 0; width: 32px; height: 32px; margin: -16px 0 0 -16px; border-radius: 50%;
+       display: grid; place-items: center; pointer-events: auto; }
+.pins[inert] .pin { pointer-events: none; }
+.pin-stem { position: absolute; left: 0; top: 0; height: 1.5px; margin-top: -.75px; transform-origin: 0 50%;
+            background: linear-gradient(90deg, rgba(255, 111, 174, .7), rgba(255, 111, 174, .15)); pointer-events: none; }
+.pin::after { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--memory);
+              box-shadow: 0 0 0 4px rgba(255, 111, 174, .25), 0 0 18px 4px rgba(255, 111, 174, .5); transition: transform .25s; }
+.pin:hover::after, .pin--hot::after { transform: scale(1.5); }
+.pin--dropped::after { animation: pin-drop .7s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes pin-drop { from { transform: translateY(-60px) scale(.4); } }
+
+/* The strip of every photo. "safe center" starts it at the left when it overflows (M5). */
+.strip {
+  position: fixed; z-index: 4; left: 0; right: 0; bottom: 0; display: flex; gap: 10px; justify-content: safe center;
+  overflow-x: auto; padding: 16px 16px max(18px, env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgba(30, 36, 43, .6));
+}
+.thumb { flex: none; width: 52px; height: 92px; border-radius: 5px; overflow: hidden; display: grid; place-items: center; transition: transform .25s; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb:hover, .thumb--hot { transform: translateY(-6px); }
+.thumb--waiting { outline: 2px dashed var(--memory); outline-offset: -2px; }
+.thumb--waiting img { opacity: .55; }
+.thumb--add { border: 1.5px dashed var(--line-strong); color: var(--ink-soft); }
+.thumb--add:hover { color: var(--ink); border-color: var(--ink); }
+.thumb--add svg { width: 18px; height: 18px; }
+
+/* A photo, opened where it was taken. */
+.caption { position: fixed; z-index: 4; left: clamp(16px, 6vw, 80px); bottom: clamp(24px, 8vh, 72px); max-width: min(26rem, calc(100% - 140px)); }
+.caption h2 { font-size: clamp(1.6rem, 3.6vw, 2.4rem); line-height: 1.05; margin: 0 0 6px; overflow-wrap: anywhere; }
+.caption p { margin: 0; color: var(--ink-soft); font-size: .92rem; }
+.caption .caption__links { display: flex; gap: 6px; margin: 8px 0 0 -4px; color: var(--ink); font-size: 1rem; }
+.card { position: fixed; z-index: 3; margin: 0; right: clamp(16px, 9vw, 140px); top: 50%; transform: translateY(-54%); width: min(280px, 56vw); }
+.card img { width: 100%; display: block; border-radius: 4px; box-shadow: 0 24px 60px rgba(0, 0, 0, .45); }
+.photo-nav { position: fixed; z-index: 4; right: clamp(16px, 6vw, 80px); bottom: clamp(24px, 8vh, 72px); display: flex; gap: 8px; }
+.round { width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; }
+.round:hover { border-color: var(--ink); }
+.round:disabled { opacity: .35; cursor: default; }
+.round svg { width: 18px; height: 18px; }
+.caption:not([hidden]), .card:not([hidden]), .photo-nav:not([hidden]) { animation: rise-in .45s ease; }
+@keyframes rise-in { from { opacity: 0; transform: translateY(8px); } }
+.card:not([hidden]) { animation: card-in .45s ease; }
+@keyframes card-in { from { opacity: 0; transform: translateY(-50%); } }
+
+/* Placing a photo: from above, tap where you stood. */
+/* No transform here: it would pin the fixed Cancel button to this box instead of the screen. */
+.placing { position: fixed; z-index: 4; left: 0; right: 0; top: 44%; text-align: center; pointer-events: none; margin: 0; }
+.placing__ask { font-family: var(--serif); font-size: clamp(1.4rem, 3.4vw, 1.8rem); margin: 0; text-shadow: 0 2px 20px rgba(0, 0, 0, .55); }
+.placing__note { min-height: 1.5em; margin: 6px 0 0; color: var(--ink); text-shadow: 0 1px 12px rgba(0, 0, 0, .7); }
+.placing .quiet { pointer-events: auto; position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%); }
+.placing-now .room-canvas { cursor: crosshair; }
+.ghost { position: fixed; z-index: 4; left: 0; top: 0; width: 46px; height: 82px; margin: -90px 0 0 -23px; border-radius: 4px;
+         overflow: hidden; pointer-events: none; box-shadow: 0 8px 30px rgba(0, 0, 0, .4); }
+.ghost img { width: 100%; height: 100%; object-fit: cover; }
+@media (hover: none) { .ghost { display: none; } }
+
+@media (max-width: 600px) {
+  .thumb { width: 42px; height: 74px; }
+  .caption { bottom: 132px; max-width: calc(100% - 32px); }
+  .photo-nav { bottom: 140px; }
+  .card { right: 50%; transform: translate(50%, -62%); top: 42%; width: 52vw; }
+  .card:not([hidden]) { animation: none; }
+}

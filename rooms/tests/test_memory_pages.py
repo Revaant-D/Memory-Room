@@ -31,18 +31,17 @@ class MemoryPagesTestCase(TempMediaTestCase):
 
 
 class PhotoGridTests(MemoryPagesTestCase):
-    def test_no_photos_text(self):
+    def test_no_photos_offers_to_add(self):
+        # 18 Nov: "No photos yet." went; the "Add photos" link says it.
         response = self.client.get("/places/dorm/")
-        self.assertContains(response, "No photos yet.")
         self.assertContains(response, 'href="/places/dorm/memories/new/"')
 
     def test_place_page_shows_photos(self):
         first, second = self.make_memory(), self.make_memory()
         response = self.client.get("/places/dorm/")
-        self.assertContains(response, "Photos (2)")
+        self.assertContains(response, "2 photos")  # 18 Nov: was "Photos (2)"
         self.assertContains(response, f'src="{first.photo_address()}"')
         self.assertContains(response, f'src="{second.photo_address()}"')
-        self.assertNotContains(response, "No photos yet.")
 
     def test_other_users_photos_not_listed(self):
         mine = self.make_memory()
@@ -60,10 +59,11 @@ class PhotoGridTests(MemoryPagesTestCase):
         self.assertContains(response, "9 May 2026")
 
     def test_photo_without_caption_or_date(self):
+        # 18 Nov: no "(no caption)" or "no date" filler under each photo.
         self.make_memory()
         response = self.client.get("/places/dorm/")
-        self.assertContains(response, "(no caption)")
-        self.assertContains(response, "no date")
+        self.assertContains(response, 'alt="Photo with no caption"')
+        self.assertNotContains(response, "(no caption)")
 
     def test_newest_photo_first_undated_last(self):
         self.make_memory(caption="undated one")

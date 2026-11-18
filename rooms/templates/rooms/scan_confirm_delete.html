@@ -3,17 +3,17 @@
 {% block title %}Delete room video · {{ place.name }} · Memory Room{% endblock %}
 
 {% block content %}
+  <a class="back" href="{{ place.get_absolute_url }}">{{ place.name }}</a>
   <h1>Delete this room video?</h1>
-  <p>
-    The video of <strong>{{ place.name }}</strong> filmed on
-    {{ scan.taken_on|date:"j M Y" }} will be deleted for good. Your photos stay.
+  <p class="meta">
+    The video of {{ place.name }} filmed on {{ scan.taken_on|date:"j M Y" }} will be deleted for good, with its 3D room.
+    {% if lost == 1 %}1 photo loses its place in the room; the photo itself stays.{% elif lost %}{{ lost }} photos lose their place in the room; the photos themselves stay.{% else %}Your photos stay.{% endif %}
   </p>
-  <p>This cannot be undone.</p>
   <form method="post">
     {% csrf_token %}
     <p class="actions">
-      <button class="button button--danger" type="submit">Delete video</button>
-      <a class="button button--quiet" href="{{ place.get_absolute_url }}">Cancel</a>
+      <button class="act act--danger" type="submit">Delete video</button>
+      <a class="quiet" href="{{ place.get_absolute_url }}">Keep it</a>
     </p>
   </form>
 {% endblock %}

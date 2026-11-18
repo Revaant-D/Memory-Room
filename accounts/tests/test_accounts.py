@@ -196,10 +196,12 @@ def header_html(response):
 
 class HeaderTests(TestCase):
     def test_header_logged_out(self):
-        header = header_html(self.client.get("/"))
-        self.assertIn('href="/accounts/login/"', header)
-        self.assertIn('href="/accounts/signup/"', header)
-        self.assertNotIn("Log out", header)
+        # 18 Nov (Dollhouse look): logged out, the header is the wordmark only; the
+        # front page's own buttons carry "Sign up" and "Log in", so they are not said twice.
+        response = self.client.get("/")
+        self.assertContains(response, 'href="/accounts/login/"')
+        self.assertContains(response, 'href="/accounts/signup/"')
+        self.assertNotIn("Log out", header_html(response))
 
     def test_header_logged_in(self):
         get_user_model().objects.create_user("ana", password=PASSWORD)

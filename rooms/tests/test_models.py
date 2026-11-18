@@ -233,3 +233,44 @@ class PinTests(ModelTestCase):
         self.make_pin()
         self.place.delete()
         self.assertEqual(Pin.objects.count(), 0)
+
+
+class PinCameraTests(ModelTestCase):
+    """Pin.camera: which way the camera faced and how wide it saw (18 Nov)."""
+
+    # The same pin as PinTests makes, without re-running PinTests' own tests.
+    make_pin = PinTests.make_pin
+
+    def setUp(self):
+        super().setUp()
+        self.scan = self.make_scan()
+        self.memory = self.make_memory()
+
+    IDENTITY = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+
+    def test_camera_is_optional(self):
+        pin = self.make_pin()
+        pin.refresh_from_db()
+        self.assertIsNone(pin.camera)
+
+    def test_camera_accepts_rotation_and_fov(self):
+        pin = self.make_pin(camera={"rotation": self.IDENTITY, "vfov": 60.0})
+        pin.refresh_from_db()
+        self.assertEqual(pin.camera, {"rotation": self.IDENTITY, "vfov": 60.0})
+
+    def test_camera_rejects_bad_shapes(self):
+        bad = [
+            "facing north",
+            {"vfov": 60.0},
+            {"rotation": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]], "vfov": 60.0},
+            {"rotation": [[1.0, 0.0, "x"], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], "vfov": 60.0},
+            {"rotation": [[1.0, 0.0, float("nan")], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], "vfov": 60.0},
+            {"rotation": self.IDENTITY, "vfov": 0},
+            {"rotation": self.IDENTITY, "vfov": 180},
+            {"rotation": self.IDENTITY, "vfov": "wide"},
+            {"rotation": self.IDENTITY},
+        ]
+        for camera in bad:
+            with self.subTest(camera=camera), self.assertRaises(ValidationError):
+                self.make_pin(camera=camera)
+        self.assertEqual(Pin.objects.count(), 0)

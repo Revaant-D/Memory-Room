@@ -5,6 +5,7 @@ database. That way the rule "each user sees only their own places" is written
 in one spot and no view can forget it.
 """
 
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 
 from rooms.models import Memory, Place, Scan
@@ -36,3 +37,11 @@ def get_own_memory(user, pk):
     Like a scan, a memory belongs to a place and the place has the owner.
     """
     return get_object_or_404(Memory, pk=pk, place__owner=user)
+
+
+def get_own_built_scan(user, pk):
+    """This user's scan, if its 3D room has been built; otherwise 404."""
+    scan = get_own_scan(user, pk)
+    if scan.status != Scan.Status.READY or not scan.points_file:
+        raise Http404("This room has not been built yet.")
+    return scan

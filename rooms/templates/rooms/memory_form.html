@@ -3,19 +3,15 @@
 {% block title %}Photo · {{ place.name }} · Memory Room{% endblock %}
 
 {% block content %}
-  <p><a href="{{ place.get_absolute_url }}">← {{ place.name }}</a></p>
-  <h1>Photo</h1>
-  <img class="photo-large" src="{{ memory.photo_address }}"
-       alt="{{ memory.caption|default:'Photo with no caption' }}">
-  <form class="form" method="post">
+  <a class="back" href="{{ place.get_absolute_url }}?photo={{ memory.pk }}">{{ place.name }}</a>
+  <h1>This photo</h1>
+  <img class="photo-large" src="{{ memory.photo_address }}" alt="{{ memory.caption|default:'Photo with no caption' }}">
+  <form method="post">
     {% csrf_token %}
     {% include "includes/form_fields.html" %}
     <p class="actions">
-      <button class="button" type="submit">Save</button>
-      <a class="button button--quiet" href="{{ place.get_absolute_url }}">Cancel</a>
+      <button class="act" type="submit">Save</button>
+      <a class="quiet danger" href="{% url 'memory_delete' memory.pk %}">Delete this photo</a>
     </p>
   </form>
-  <p class="form-footer">
-    <a class="danger-link" href="{% url 'memory_delete' memory.pk %}">Delete this photo</a>
-  </p>
 {% endblock %}

@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/switcher.css">
+<script type="importmap">{"imports":{"three":"/static/viewer/vendor/three.module.min.js","three/addons/":"/static/viewer/vendor/"}}</script>
+<style>
+  :root {
+    --film: #e4e8e3;     /* drafting film */
+    --sheet: #eef1ec;
+    --graphite: #2a2e31;
+    --soft: #6b7276;
+    --pencil: #6f9cc0;   /* non-photo blue: measurements, guides */
+    --mark: #c8322b;     /* where a photo was taken */
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--film); color: var(--graphite); font: 400 15px/1.5 Archivo, system-ui, sans-serif;
+         font-variant-numeric: tabular-nums; overflow: hidden; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+  :focus-visible { outline: 2px solid var(--pencil); outline-offset: 3px; }
+
+  .app { display: grid; grid-template-columns: minmax(300px, 360px) 1fr; height: 100%; }
+  aside { border-right: 1px solid rgba(42, 46, 49, .14); padding: 28px 28px 20px; display: flex; flex-direction: column;
+          overflow: auto; background: var(--sheet); }
+  #drawing { position: relative; overflow: hidden; }
+  #stage { position: absolute; inset: 0; }
+  #overlay { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+
+  .wordmark { font-stretch: 125%; font-weight: 800; font-size: 1.05rem; letter-spacing: -.01em; margin: 0 0 auto; }
+  .panel { display: none; }
+  .panel.on { display: block; }
+
+  /* Arrival */
+  #p-arrive h1 { font-stretch: 112%; font-weight: 700; font-size: clamp(2rem, 3.4vw, 2.9rem); line-height: 1.02;
+                 letter-spacing: -.02em; margin: 0 0 18px; }
+  #p-arrive p { color: var(--soft); margin: 0 0 26px; max-width: 26ch; }
+  .act { display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; background: var(--graphite);
+         color: var(--sheet); font-weight: 600; border-radius: 2px; }
+  .act-quiet { margin-left: 16px; text-decoration: underline; text-underline-offset: 4px; }
+
+  /* The index: places, then a place's photos. Numbers key each photo to its mark on the plan. */
+  .crumb { color: var(--soft); min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
+  .crumb:hover { color: var(--graphite); }
+  .crumb svg { width: 14px; height: 14px; }
+  h2 { font-stretch: 112%; font-weight: 700; font-size: 1.7rem; line-height: 1.05; letter-spacing: -.015em; margin: 6px 0 4px; }
+  .dims { color: var(--soft); margin: 0 0 22px; }
+  .rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid rgba(42, 46, 49, .14); }
+  .rows li { border-bottom: 1px solid rgba(42, 46, 49, .14); }
+  .row { display: grid; grid-template-columns: 26px 38px 1fr; gap: 12px; align-items: center; width: 100%; padding: 9px 0; }
+  .row:hover, .row.hot { background: rgba(111, 156, 192, .12); }
+  .row[aria-current] { background: rgba(200, 50, 43, .08); }
+  .row .no { font-stretch: 62%; font-weight: 600; font-size: 1.05rem; color: var(--mark); text-align: center; }
+  .row img { width: 38px; height: 52px; object-fit: cover; display: block; }
+  .row .t { display: block; font-weight: 500; line-height: 1.25; }
+  .row .d { display: block; color: var(--soft); font-size: .85rem; }
+  .row.waiting .no { color: var(--soft); }
+  .row.waiting .d { color: var(--mark); }
+  .placerow { display: block; padding: 14px 0; color: var(--soft); }
+  .placerow b { display: block; color: var(--graphite); font-stretch: 112%; font-size: 1.25rem; font-weight: 700; }
+  .placerow:hover b { text-decoration: underline; text-underline-offset: 4px; }
+  .newplace { margin-top: 14px; color: var(--soft); min-height: 44px; }
+  .newplace:hover { color: var(--graphite); }
+
+  /* Title block: bottom right of the drawing, as on any plan */
+  #titleblock { position: absolute; right: 20px; bottom: 20px; border: 1.5px solid var(--graphite); background: var(--sheet);
+                display: grid; grid-template-columns: auto auto; font-size: .78rem; transition: opacity .5s; }
+  #titleblock div { padding: 6px 10px; border-right: 1px solid rgba(42,46,49,.3); border-bottom: 1px solid rgba(42,46,49,.3); }
+  #titleblock div:nth-child(2n) { border-right: 0; }
+  #titleblock .big { grid-column: 1 / -1; font-stretch: 112%; font-weight: 700; font-size: 1rem; }
+  #titleblock span { display: block; color: var(--soft); font-size: .7rem; }
+
+  /* Marks on the plan */
+  .mark { position: absolute; left: 0; top: 0; width: 28px; height: 28px; margin: -14px 0 0 -14px; border-radius: 50%;
+          border: 2px solid var(--mark); background: var(--sheet); color: var(--mark); display: grid; place-items: center;
+          font-stretch: 62%; font-weight: 700; font-size: .9rem; pointer-events: auto; transition: opacity .3s, transform .2s; }
+  .mark:hover, .mark.hot { background: var(--mark); color: var(--sheet); }
+  .mark.new { animation: stamp .45s cubic-bezier(.3, 1.8, .5, 1); }
+  @keyframes stamp { from { transform: scale(2.4); opacity: 0; } }
+  #overlay.hide .mark, #overlay.hide svg { opacity: 0; pointer-events: none; }
+  #overlay svg { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity .3s; }
+  .dim line { stroke: var(--pencil); stroke-width: 1; }
+  .dim text { fill: var(--pencil); font: 500 12px Archivo, sans-serif; font-stretch: 75%; }
+  .sight { stroke: var(--mark); stroke-width: 1.5; }
+
+  /* A photo opened: the plan has stood up into the room */
+  #photo-bar { position: absolute; left: 20px; right: 20px; bottom: 20px; display: none; align-items: end; justify-content: space-between; gap: 16px; }
+  .photo-open #photo-bar { display: flex; }
+  .photo-open #titleblock { opacity: 0; }
+  #photo-bar .cap { background: var(--sheet); padding: 10px 14px; border-left: 3px solid var(--mark); }
+  #photo-bar .cap b { display: block; font-stretch: 112%; font-size: 1.15rem; }
+  #photo-bar .cap span { color: var(--soft); font-size: .85rem; }
+  .tool { background: var(--sheet); min-height: 44px; padding: 0 16px; display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid var(--graphite); }
+  .tool:hover { background: var(--graphite); color: var(--sheet); }
+
+  #hint { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: var(--graphite); color: var(--sheet);
+          padding: 8px 14px; display: none; }
+  .placing #hint { display: block; }
+  .placing #stage { cursor: crosshair; }
+
+  #loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--soft); }
+
+  @media (max-width: 760px) {
+    body { overflow: auto; }
+    .app { grid-template-columns: 1fr; grid-template-rows: 58vh auto; height: auto; }
+    #drawing { grid-row: 1; }
+    aside { grid-row: 2; border-right: 0; padding: 18px 16px; }
+    .wordmark { margin-bottom: 18px; }
+    #titleblock { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <p class="wordmark">Memory Room</p>
+
+    <section id="p-arrive" class="panel on">
+      <h1>Film a room. Pin each photo where it was taken.</h1>
+      <p>Your phone video becomes a measured plan of the room, and the room around every photo.</p>
+      <button class="act" data-go="places">Sign up</button><button class="act-quiet" data-go="places">Log in</button>
+    </section>
+
+    <section id="p-places" class="panel">
+      <h2>Your places</h2>
+      <ul class="rows">
+        <li><button class="placerow" data-go="place"><b>Octave Room</b>Filmed 18 Nov 2026. 6 photos, 1 to place</button></li>
+      </ul>
+      <button class="newplace">Film a new place</button>
+    </section>
+
+    <section id="p-place" class="panel">
+      <button class="crumb" data-go="places"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3 5 8l5 5"/></svg>Your places</button>
+      <h2>Octave Room</h2>
+      <p class="dims" id="dims"></p>
+      <ul class="rows" id="list"></ul>
+    </section>
+  </aside>
+
+  <main id="drawing">
+    <div id="stage"></div>
+    <div id="overlay"><svg id="svg"></svg></div>
+    <div id="titleblock">
+      <div class="big">Octave Room</div>
+      <div><span>Filmed</span>18 Nov 2026</div>
+      <div><span>Points</span>393,033</div>
+      <div><span>Floor</span><b id="tb-floor"></b></div>
+      <div><span>Ceiling</span>2.78 m</div>
+    </div>
+    <div id="hint">Tap the plan where you stood</div>
+    <div id="photo-bar">
+      <div class="cap"><b id="cap"></b><span id="capd"></span></div>
+      <button class="tool" data-go="place">Back to the plan</button>
+    </div>
+    <p id="loading">Loading the room</p>
+  </main>
+</div>
+<nav class="mockup-switch" aria-label="Mockups"><a href="a-dollhouse.html">A</a><a aria-current="page" href="b-plan.html">B</a><a href="c-window.html">C</a></nav>
+
+<script type="module">
+import { createRoom, reduceMotion } from "./shared/room.js";
+
+const $ = (id) => document.getElementById(id);
+const room = await createRoom($("stage"), { pointSize: 0.03, tint: 0x2a2e31, floorColor: 0xe4e8e3 });
+window.mock = room;
+$("loading").remove();
+const { box, uniforms: u, THREE } = room;
+const [cx, cy] = box.centre;
+
+// Plan view: straight down, from far away, so it reads as a flat drawing.
+function planView(scale = 1) {
+  const el = $("stage");
+  const aspect = el.clientWidth / el.clientHeight;
+  const reach = Math.max(box.size[1] * 1.35, (box.size[0] * 1.35) / aspect) * scale;
+  const h = 40;
+  return room.view([cx, cy - 0.001, h], [cx, cy, 0], THREE.MathUtils.radToDeg(2 * Math.atan(reach / 2 / h)));
+}
+
+const photos = [...room.photos];
+let waiting = room.data.unplaced;
+const extent = { x0: box.low[0], x1: box.high[0], y0: box.low[1], y1: box.high[1] };
+$("dims").textContent = `${(extent.x1 - extent.x0).toFixed(2)} by ${(extent.y1 - extent.y0).toFixed(2)} m, as filmed`;
+$("tb-floor").textContent = `${(extent.x1 - extent.x0).toFixed(1)} × ${(extent.y1 - extent.y0).toFixed(1)} m`;
+
+// ---- the index of photos -------------------------------------------------------------
+function buildList() {
+  const list = $("list");
+  list.replaceChildren();
+  photos.forEach((p, i) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<button class="row" data-id="${p.id}"><span class="no">${i + 1}</span><img src="${p.src}" alt=""><span><span class="t">${p.caption}</span><span class="d">18 Nov 2026</span></span></button>`;
+    li.firstChild.onclick = () => openPhoto(p);
+    li.firstChild.onmouseenter = () => hot(p, true);
+    li.firstChild.onmouseleave = () => hot(p, false);
+    list.append(li);
+  });
+  if (waiting) {
+    const li = document.createElement("li");
+    li.innerHTML = `<button class="row waiting"><span class="no">?</span><img src="${waiting.src}" alt=""><span><span class="t">${waiting.caption}</span><span class="d">Not placed. Show where you stood</span></span></button>`;
+    li.firstChild.onclick = startPlacing;
+    list.append(li);
+  }
+}
+buildList();
+
+// ---- marks and measurements on the drawing -------------------------------------------
+const marks = new Map();
+function addMark(p, isNew = false) {
+  const b = document.createElement("button");
+  b.className = "mark" + (isNew ? " new" : "");
+  b.textContent = photos.indexOf(p) + 1;
+  b.setAttribute("aria-label", p.caption);
+  b.onclick = () => openPhoto(p);
+  b.onmouseenter = () => hot(p, true);
+  b.onmouseleave = () => hot(p, false);
+  $("overlay").append(b);
+  marks.set(p.id, b);
+}
+function hot(p, on) {
+  marks.get(p.id)?.classList.toggle("hot", on);
+  document.querySelector(`.row[data-id="${p.id}"]`)?.classList.toggle("hot", on);
+}
+const spot = (p) => p.position || p.spot;
+const forward = (p) => p.quaternion ? new THREE.Vector3(0, 0, -1).applyQuaternion(p.quaternion) : null;
+
+let showMarks = false, drawn = 0;
+// The measurement lines draw themselves each time the plan settles.
+function grow() {
+  const t0 = performance.now();
+  (function step() {
+    drawn = reduceMotion ? 1 : Math.min(1, (performance.now() - t0) / 900);
+    if (drawn < 1) requestAnimationFrame(step);
+  })();
+}
+function dimLine(a, b, label, off) {
+  const A = room.project(a), B = room.project(b);
+  const nx = -(B.y - A.y), ny = B.x - A.x, n = Math.hypot(nx, ny) || 1;
+  const ox = (nx / n) * off, oy = (ny / n) * off;
+  const r = $("drawing").getBoundingClientRect();
+  const ax = A.x - r.left + ox, ay = A.y - r.top + oy, bx = B.x - r.left + ox, by = B.y - r.top + oy;
+  const len = Math.hypot(bx - ax, by - ay) * drawn;
+  const ex = ax + (bx - ax) * drawn, ey = ay + (by - ay) * drawn;
+  const tick = (x, y) => `<line x1="${x - 5}" y1="${y + 5}" x2="${x + 5}" y2="${y - 5}"/>`;
+  const mx = (ax + bx) / 2, my = (ay + by) / 2;
+  const vertical = Math.abs(by - ay) > Math.abs(bx - ax);
+  return `<g class="dim"><line x1="${ax}" y1="${ay}" x2="${ex}" y2="${ey}"/>${tick(ax, ay)}${drawn > .98 ? tick(bx, by) : ""}
+    ${drawn > .98 ? `<text x="${mx}" y="${my}" text-anchor="middle" dy="${vertical ? 4 : -6}" ${vertical ? `transform="rotate(-90 ${mx} ${my})"` : ""} dx="0">${label}</text>` : ""}</g>`;
+}
+
+room.onFrame(() => {
+  const r = $("drawing").getBoundingClientRect();
+  let svg = "";
+  if (drawn > 0 && showMarks) {
+    svg += dimLine([extent.x0, extent.y1, 0], [extent.x1, extent.y1, 0], `${(extent.x1 - extent.x0).toFixed(2)} m`, -22);
+    svg += dimLine([extent.x0, extent.y0, 0], [extent.x0, extent.y1, 0], `${(extent.y1 - extent.y0).toFixed(2)} m`, -22);
+  }
+  for (const p of photos) {
+    const s = room.project(spot(p));
+    const el = marks.get(p.id);
+    if (!el) continue;
+    el.style.transform = `translate(${s.x - r.left}px, ${s.y - r.top}px)`;
+    el.style.opacity = showMarks ? 1 : 0;
+    el.style.pointerEvents = showMarks ? "auto" : "none";
+    const f = forward(p);
+    if (f && showMarks) {
+      const t = room.project(spot(p).clone().addScaledVector(f.setZ(0).normalize(), 0.45));
+      svg += `<line class="sight" x1="${s.x - r.left}" y1="${s.y - r.top}" x2="${t.x - r.left}" y2="${t.y - r.top}"/>`;
+    }
+  }
+  $("svg").innerHTML = svg;
+});
+
+// ---- moments ---------------------------------------------------------------------------
+let state = "arrive";
+function panel(id) { document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("on", p.id === id)); }
+
+async function toPlan(scale = 1, duration = 1500) {
+  document.body.classList.remove("photo-open");
+  room.hideAllPhotos(300);
+  if (u.tint.value.getHex() !== 0x2a2e31) { u.tintAmount.value = 0; u.tint.value.set(0x2a2e31); }
+  room.animate("tint", u.tintAmount, 1, duration);
+  room.animate("floor", u.floorFade, 1, duration);
+  room.animate("near", u.nearCut, 0, 300);
+  room.animate("cut", u.cut, 2.2, duration);
+  room.animate("opacity", u.opacity, 0.07, duration);
+  room.material.depthWrite = false;
+  await room.flyTo(planView(scale), duration);
+}
+
+async function go(next) {
+  state = next;
+  document.body.classList.remove("placing");
+  if (next === "places") {
+    panel("p-places");
+    showMarks = false; drawn = 0;
+    await toPlan(1.35);
+  }
+  if (next === "place") {
+    panel("p-place");
+    if (!marks.size) photos.forEach((p) => addMark(p));
+    await toPlan(1);
+    if (state === "place") { showMarks = true; grow(); }
+  }
+}
+
+async function openPhoto(p) {
+  state = "photo";
+  showMarks = false;
+  document.body.classList.remove("placing");
+  document.querySelectorAll(".row").forEach((r) => r.toggleAttribute("aria-current", r.dataset.id == p.id));
+  await room.hideAllPhotos(200);
+  // The drawing stands up into the room: graphite turns back into the room's colours on the way.
+  room.animate("tint", u.tintAmount, 0, 2000);
+  room.animate("floor", u.floorFade, 0, 1600);
+  room.animate("cut", u.cut, 99, 1200);
+  room.animate("near", u.nearCut, 0.7, 2000);
+  room.animate("opacity", u.opacity, 1, 1800).then(() => (room.material.depthWrite = true));
+  await room.flyTo(room.viewFor(p, 1.25), 2200);
+  if (state !== "photo") return;
+  u.tint.value.set(0xe4e8e3);
+  room.animate("tint", u.tintAmount, 0.62, 900);
+  room.showPhoto(p, true, 600);
+  $("cap").textContent = `${photos.indexOf(p) + 1}. ${p.caption}`;
+  $("capd").textContent = p.position
+    ? `18 Nov 2026, camera ${p.position.z.toFixed(2)} m above the floor`
+    : "Placed by you. Where you stood, not which way you faced";
+  document.body.classList.add("photo-open");
+}
+
+async function startPlacing() {
+  if (state !== "place") await go("place");
+  state = "placing";
+  document.body.classList.add("placing");
+}
+$("stage").addEventListener("click", (e) => {
+  if (state !== "placing") return;
+  const hit = room.floorAt(e.clientX, e.clientY);
+  if (!hit || hit.x < box.low[0] || hit.x > box.high[0] || hit.y < box.low[1] || hit.y > box.high[1]) return;
+  const p = { ...waiting, spot: new THREE.Vector3(hit.x, hit.y, 1.3) };
+  waiting = null;
+  photos.push(p);
+  addMark(p, true);
+  buildList();
+  document.body.classList.remove("placing");
+  state = "place";
+});
+
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-go]");
+  if (t) go(t.dataset.go);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && state === "photo") go("place"); });
+
+// ---- arrival: the plan draws itself, floor first, then the walls rise into lines -----------
+room.jump(planView(1.25));
+u.tintAmount.value = 1; u.floorFade.value = 1; u.cut.value = 0.02; u.opacity.value = 0.07;
+room.material.depthWrite = false;
+await room.animate("cut", u.cut, 2.2, reduceMotion ? 0 : 2400);
+showMarks = true;
+grow();
+</script>
+</body>
+</html>

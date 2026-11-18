@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dollhouse mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gloock&family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/switcher.css">
+<script type="importmap">{"imports":{"three":"/static/viewer/vendor/three.module.min.js","three/addons/":"/static/viewer/vendor/"}}</script>
+<style>
+  :root {
+    --field: #3e4752;      /* the bedspread's slate */
+    --field-lit: #4c5663;
+    --ink: #eef0f2;
+    --ink-soft: #a9b2bc;
+    --memory: #ff6fae;     /* the room's own pink light */
+    --line: rgba(238, 240, 242, .22);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    background: radial-gradient(ellipse 70% 60% at 50% 55%, var(--field-lit), var(--field) 70%);
+    color: var(--ink); font: 400 16px/1.5 Onest, system-ui, sans-serif;
+  }
+  #stage { position: fixed; inset: 0; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--memory); outline-offset: 4px; border-radius: 4px; }
+  .serif { font-family: Gloock, Georgia, serif; font-weight: 400; letter-spacing: -.01em; }
+
+  /* Each layer of text belongs to one moment and fades with it. */
+  .layer { position: fixed; opacity: 0; pointer-events: none; transition: opacity .6s ease; }
+  .layer.on { opacity: 1; pointer-events: auto; }
+
+  /* Arrival */
+  #arrive { left: clamp(16px, 6vw, 80px); bottom: clamp(28px, 9vh, 96px); max-width: 30rem; }
+  #arrive h1 { font-size: clamp(2.6rem, 7vw, 5.2rem); line-height: .95; margin: 0 0 22px; }
+  #arrive p { margin: 0 0 28px; color: var(--ink-soft); max-width: 22rem; }
+  .act { display: inline-flex; align-items: center; min-height: 44px; padding: 0 22px; border-radius: 999px;
+         background: var(--memory); color: #2a1220; font-weight: 600; }
+  .act-quiet { padding: 0 6px; margin-left: 14px; color: var(--ink); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--line); }
+
+  /* Places: the room sits on the field like a model on a table */
+  #places-label { left: 50%; transform: translateX(-50%); text-align: center; }
+  #places-label .name { font-size: clamp(1.8rem, 4vw, 2.6rem); line-height: 1; display: block; }
+  #places-label .facts { color: var(--ink-soft); font-size: .9rem; }
+  #enter { position: fixed; border-radius: 50%; }
+  #new-place { position: fixed; width: 150px; height: 110px; border: 1.5px dashed var(--line); border-radius: 6px;
+               transform: skewX(-18deg); display: grid; place-items: center; color: var(--ink-soft); }
+  #new-place span { transform: skewX(18deg); font-size: .9rem; }
+  #new-place:hover { border-color: var(--ink-soft); color: var(--ink); }
+
+  /* Inside a place */
+  #top { top: 18px; left: 16px; right: 16px; display: flex; align-items: baseline; gap: 18px; }
+  #top .name { font-size: 1.7rem; line-height: 1; }
+  .back { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-soft); min-height: 44px; }
+  .back svg { width: 16px; height: 16px; }
+  .back:hover { color: var(--ink); }
+
+  .pin { position: fixed; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%;
+         display: grid; place-items: center; opacity: 0; pointer-events: none; transition: opacity .4s; }
+  .pin::after { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--memory);
+                box-shadow: 0 0 0 4px rgba(255, 111, 174, .25), 0 0 18px 4px rgba(255, 111, 174, .5); transition: transform .25s; }
+  .pins-on .pin { opacity: 1; pointer-events: auto; }
+  .pin:hover::after, .pin.hot::after { transform: scale(1.5); }
+  .pin.dropped::after { animation: drop .7s cubic-bezier(.2, 1.6, .4, 1); }
+  @keyframes drop { from { transform: translateY(-60px) scale(.4); } }
+
+  #strip { bottom: 0; left: 0; right: 0; padding: 14px 16px 18px; display: flex; gap: 10px; justify-content: center;
+           overflow-x: auto; background: linear-gradient(transparent, rgba(30, 36, 43, .55)); }
+  .thumb { flex: 0 0 auto; width: 52px; height: 92px; border-radius: 5px; overflow: hidden; outline-offset: 3px;
+           transition: transform .25s; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb:hover, .thumb.hot { transform: translateY(-6px); }
+  .thumb.waiting { outline: 2px dashed var(--memory); }
+  .thumb.waiting img { opacity: .55; }
+
+  /* A photo, standing where it was taken */
+  #caption { left: clamp(16px, 6vw, 80px); bottom: clamp(24px, 8vh, 72px); max-width: 24rem; }
+  #caption .cap { font-size: clamp(1.6rem, 3.6vw, 2.4rem); line-height: 1.05; display: block; margin-bottom: 6px; }
+  #caption .when { color: var(--ink-soft); font-size: .9rem; }
+  #photo-nav { right: clamp(16px, 6vw, 80px); bottom: clamp(24px, 8vh, 72px); display: flex; gap: 8px; }
+  .round { width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; }
+  .round:hover { border-color: var(--ink); }
+  .round svg { width: 18px; height: 18px; }
+
+  /* Placing a photo by hand */
+  #placing { top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none !important; }
+  #placing p { font-size: 1.6rem; margin: 0; text-shadow: 0 2px 20px rgba(0,0,0,.5); }
+  #ghost { position: fixed; width: 46px; height: 82px; margin: -90px 0 0 -23px; border-radius: 4px; overflow: hidden;
+           pointer-events: none; opacity: 0; transition: opacity .3s; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+  #ghost img { width: 100%; height: 100%; object-fit: cover; }
+  .placing #stage { cursor: crosshair; }
+  .placing #ghost { opacity: 1; }
+
+  #loading { position: fixed; inset: 0; display: grid; place-items: center; color: var(--ink-soft); }
+  @media (max-width: 600px) {
+    #new-place { display: none; }
+    .thumb { width: 42px; height: 74px; }
+  }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<p id="loading">Loading the room</p>
+
+<section id="arrive" class="layer">
+  <h1 class="serif">Keep the room.</h1>
+  <p>Film a place once on your phone. It comes back as a room you can walk through, with your photos where you took them.</p>
+  <button class="act" data-go="places">Sign up</button><button class="act-quiet" data-go="places">Log in</button>
+</section>
+
+<section id="places-label" class="layer">
+  <span class="name serif">Octave Room</span>
+  <span class="facts">Filmed 18 Nov 2026, 6 photos</span>
+</section>
+<button id="enter" class="layer" aria-label="Open Octave Room"></button>
+<button id="new-place" class="layer"><span>Film a new place</span></button>
+
+<header id="top" class="layer">
+  <button class="back" data-back><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3 5 8l5 5"/></svg><span id="back-label">Places</span></button>
+  <span class="name serif">Octave Room</span>
+</header>
+<div id="pins"></div>
+<nav id="strip" class="layer" aria-label="Photos"></nav>
+
+<section id="caption" class="layer" aria-live="polite">
+  <span class="cap serif" id="cap"></span>
+  <span class="when" id="when"></span>
+</section>
+<nav id="photo-nav" class="layer">
+  <button class="round" data-step="-1" aria-label="Previous photo"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3 5 8l5 5"/></svg></button>
+  <button class="round" data-step="1" aria-label="Next photo"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m6 3 5 5-5 5"/></svg></button>
+</nav>
+
+<section id="placing" class="layer"><p class="serif">Tap where you stood</p></section>
+<div id="ghost"><img alt=""></div>
+
+<nav class="mockup-switch" aria-label="Mockups"><a aria-current="page" href="a-dollhouse.html">A</a><a href="b-plan.html">B</a><a href="c-window.html">C</a></nav>
+
+<script type="module">
+import { createRoom, reduceMotion } from "./shared/room.js";
+
+const room = await createRoom(document.getElementById("stage"), { pointSize: 0.024, tint: 0x3e4752 });
+document.getElementById("loading").remove();
+window.mock = room; // for checking the mockup from the console
+const { box, photos, uniforms: u, controls, THREE } = room;
+const [cx, cy] = box.centre;
+const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const when = "18 " + months[10] + " 2026";
+
+// The four camera positions the app moves between.
+const views = {
+  arrive: room.view([cx + 3.4, cy - 6.6, 5.0], [cx, cy, 0.7], 40),
+  places: room.view([cx + 6, cy - 11, 9], [cx, cy, 0.6], 26),
+  place:  room.view([cx + 0.6, cy - 5.0, 6.8], [cx, cy, 0.2], 44),
+  above:  room.view([cx, cy - 0.01, 9.5], [cx, cy, 0], 38),
+};
+
+const $ = (id) => document.getElementById(id);
+const layers = [...document.querySelectorAll(".layer")];
+function show(...ids) { for (const el of layers) el.classList.toggle("on", ids.includes(el.id)); }
+
+// ---- pins and the strip ------------------------------------------------------
+const pinEls = new Map();
+const placed = [...photos];
+let waiting = room.data.unplaced;
+function addPin(photo, dropped = false) {
+  const b = document.createElement("button");
+  b.className = "pin" + (dropped ? " dropped" : "");
+  b.setAttribute("aria-label", photo.caption);
+  b.onclick = () => openPhoto(photo);
+  b.onmouseenter = () => hot(photo, true);
+  b.onmouseleave = () => hot(photo, false);
+  $("pins").append(b);
+  pinEls.set(photo.id, b);
+}
+photos.forEach((p) => addPin(p));
+
+function buildStrip() {
+  const strip = $("strip");
+  strip.replaceChildren();
+  for (const p of placed) {
+    const b = document.createElement("button");
+    b.className = "thumb"; b.dataset.id = p.id;
+    b.innerHTML = `<img src="${p.src}" alt="${p.caption}">`;
+    b.onclick = () => openPhoto(p);
+    b.onmouseenter = () => hot(p, true);
+    b.onmouseleave = () => hot(p, false);
+    strip.append(b);
+  }
+  if (waiting) {
+    const b = document.createElement("button");
+    b.className = "thumb waiting";
+    b.innerHTML = `<img src="${waiting.src}" alt="${waiting.caption}, not placed yet">`;
+    b.title = "Not placed yet";
+    b.onclick = startPlacing;
+    strip.append(b);
+  }
+}
+buildStrip();
+function hot(photo, on) {
+  pinEls.get(photo.id)?.classList.toggle("hot", on);
+  document.querySelector(`.thumb[data-id="${photo.id}"]`)?.classList.toggle("hot", on);
+}
+
+const pinSpot = (p) => p.position ? p.position : p.spot;
+room.onFrame(() => {
+  for (const p of placed) {
+    const s = room.project(pinSpot(p));
+    const el = pinEls.get(p.id);
+    el.style.transform = `translate(${s.x}px, ${s.y}px)`;
+    el.hidden = !s.visible;
+  }
+  // The "open" target and the empty plot follow the model on the table.
+  if (state === "places") {
+    const c = room.project([cx, cy, 1]);
+    const r = 150;
+    Object.assign($("enter").style, { left: c.x - r + "px", top: c.y - r + "px", width: 2 * r + "px", height: 2 * r + "px" });
+    const label = room.project([cx, cy - box.size[1] / 2 - 0.3, 0]);
+    $("places-label").style.top = label.y + 30 + "px";
+    $("places-label").style.left = label.x + "px";
+    const plot = room.project([box.high[0] + 2.2, cy, 0]);
+    Object.assign($("new-place").style, { left: plot.x - 75 + "px", top: plot.y - 55 + "px" });
+  }
+});
+
+// ---- moments -------------------------------------------------------------------
+let state = "arrive";
+let current = 0;
+
+async function go(next) {
+  state = next;
+  document.body.classList.remove("pins-on", "placing");
+  controls.autoRotate = false;
+  room.animate("shift", room.shift, 0, 1200);
+  room.animate("near", u.nearCut, 0, 300);
+  if (next === "places") {
+    show();
+    room.hideAllPhotos();
+    room.animate("tint", u.tintAmount, 0, 600);
+    room.animate("cut", u.cut, 1.9, 900);
+    await room.flyTo(views.places, 1800, { orbit: true });
+    controls.enableZoom = false; controls.enablePan = false;
+    controls.autoRotate = true; controls.autoRotateSpeed = 0.6;
+    if (state === "places") show("places-label", "enter", "new-place");
+  }
+  if (next === "place") {
+    show("top");
+    $("back-label").textContent = "Places";
+    room.hideAllPhotos();
+    room.animate("tint", u.tintAmount, 0, 600);
+    room.animate("cut", u.cut, 1.3, 900);
+    await room.flyTo(views.place, 1700, { orbit: true });
+    controls.enableZoom = true;
+    if (state === "place") { show("top", "strip"); document.body.classList.add("pins-on"); }
+  }
+}
+
+async function openPhoto(photo) {
+  const from = state;
+  state = "photo";
+  current = placed.indexOf(photo);
+  document.body.classList.remove("pins-on");
+  show("top");
+  $("back-label").textContent = "Room";
+  await room.hideAllPhotos(250);
+  room.animate("near", u.nearCut, 0, 300);
+  room.animate("cut", u.cut, 99, 500);
+  // Through the room, not through the walls: a lift only when coming from outside.
+  await room.flyTo(room.viewFor(photo, 1.3), from === "photo" ? 1300 : 1900, { arc: from === "photo" ? 0 : 1.2 });
+  if (state !== "photo") return;
+  room.animate("tint", u.tintAmount, 0.55, 700);
+  room.animate("near", u.nearCut, 0.7, 700);
+  room.showPhoto(photo, true, 700);
+  $("cap").textContent = photo.caption;
+  $("when").textContent = photo.position
+    ? `${when}, ${photo.position.z.toFixed(1)} m off the floor`
+    : "Placed by you. The room knows where you stood, not which way you faced.";
+  show("top", "caption", "photo-nav");
+}
+
+function step(dir) {
+  if (state !== "photo") return;
+  openPhoto(placed[(current + dir + placed.length) % placed.length]);
+}
+
+async function startPlacing() {
+  state = "placing";
+  document.body.classList.remove("pins-on");
+  show("top");
+  $("ghost").querySelector("img").src = waiting.src;
+  room.animate("cut", u.cut, 1.6, 800);
+  await room.flyTo(views.above, 1400);
+  if (state !== "placing") return;
+  document.body.classList.add("placing", "pins-on");
+  show("top", "placing");
+}
+
+$("stage").addEventListener("pointermove", (e) => Object.assign($("ghost").style, { left: e.clientX + "px", top: e.clientY + "px" }));
+$("stage").addEventListener("click", (e) => {
+  if (state !== "placing") return;
+  const hit = room.floorAt(e.clientX, e.clientY);
+  if (!hit || hit.x < box.low[0] || hit.x > box.high[0] || hit.y < box.low[1] || hit.y > box.high[1]) return;
+  const photo = { ...waiting, spot: new THREE.Vector3(hit.x, hit.y, 1.3) };
+  waiting = null;
+  placed.push(photo);
+  addPin(photo, true);
+  buildStrip();
+  document.body.classList.remove("placing");
+  show("top");
+  setTimeout(() => go("place"), 900);
+});
+
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-go],[data-back],[data-step]");
+  if (!t) return;
+  if (t.dataset.go) go(t.dataset.go);
+  if ("back" in t.dataset) go(state === "place" ? "places" : "place");
+  if (t.dataset.step) step(Number(t.dataset.step));
+});
+$("enter").onclick = () => go("place");
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowRight") step(1);
+  if (e.key === "ArrowLeft") step(-1);
+  if (e.key === "Escape" && state !== "arrive" && state !== "places") go(state === "place" ? "places" : "place");
+});
+
+// ---- arrival: the video's points gather into the room ------------------------------
+room.jump(views.arrive);
+room.shift.value = innerWidth > 800 ? 0.17 : 0;
+u.cut.value = 1.85;
+u.spread.value = reduceMotion ? 0 : 1;
+room.animate("spread", u.spread, 0, 3200);
+controls.target.set(cx, cy, 0.7);
+controls.enabled = true; controls.enableZoom = false; controls.enablePan = false;
+controls.autoRotate = true; controls.autoRotateSpeed = 0.5;
+setTimeout(() => show("arrive"), reduceMotion ? 0 : 1800);
+</script>
+</body>
+</html>

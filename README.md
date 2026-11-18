@@ -12,7 +12,8 @@ A Django web app for INFO 490, Project 2, by Revaant Daga. **This is the first d
 - Places: create, rename, delete. Each user sees only their own; another user's address gives "page not found".
 - Room videos: upload an MP4 or MOV (up to 500 MB) to a place; delete it.
 - Photos: add up to 50 at once (JPEG, PNG or WebP, up to 20 MB each). The date is read from inside each photo. Add a caption, change the date, delete. Only the owner can open a photo file.
-- The 3D room: once a scan's room is built and imported (see [AI](#ai)), "View the room in 3D" on the place's page opens it as coloured dots you can turn and zoom, with placed photos as dots; tap one to see the photo. Only the owner can open it.
+- The 3D room: once a scan's room is built and imported (see [AI](#ai)), the place's page is that room, as coloured dots you can turn and zoom. Photos are pink dots where they were taken; tap one and the camera flies there. A photo without a spot is shown dashed: tap it, then tap the floor where you stood, and it is saved there. Only the owner can open a room or its photos.
+- The front page can show one room, thinned and with no photos (`manage.py landing_room <scan number>`; `--remove` takes it down).
 - The admin site at `/admin/` shows every table.
 
 **Works, outside the app:** a Google Colab notebook (`ai/build_room_colab.ipynb`) that turns a room video into a 3D room with the MapAnything model, and a command that brings the result into the app. See [AI](#ai) below.
@@ -71,7 +72,13 @@ Then open http://127.0.0.1:8000/ and:
 .venv\Scripts\python.exe manage.py test
 ```
 
-240 tests, all passing on 18 Nov 2026. They use a temporary database and a temporary upload folder, so they never touch your own data.
+276 tests, all passing on 18 Nov 2026. They use a temporary database and a temporary upload folder, so they never touch your own data.
+
+The room page's geometry (turning the room to line up its walls, and telling floor from outside) has its own tests, run with Node 18 or newer:
+
+```powershell
+node --test "static/viewer/tests/*.test.mjs"
+```
 
 The AI code has its own tests, which need numpy and OpenCV and run outside this environment. `ai/README.md` says how.
 
@@ -99,8 +106,8 @@ From a room video to the 3D page:
    .venv\Scripts\python.exe manage.py import_room <scan number> <path to the room zip or folder>
    ```
 
-   The command checks the room and refuses anything it cannot trust, with the reason: a failed run, a damaged points file, the wrong weights, or a made-up room (from the code's stand-in model) unless `--made-up` is given, in which case every page labels it "MADE-UP ROOM".
-4. Open the place's page and choose "View the room in 3D".
+   The command checks the room and refuses anything it cannot trust, with the reason: a failed run, a damaged points file, the wrong weights, or a made-up room (from the code's stand-in model) unless `--made-up` is given, in which case every page labels it "MADE-UP ROOM". It also refuses to replace a room whose photos have been placed, unless `--drop-pins` is given (a rebuilt room has its own frame, so the old spots would be wrong).
+4. Open the place's page: it is now the room.
 
 To try the page without a GPU, make the made-up demo room with the AI code (`python -m roompipe demo --out <folder>`, run from `ai/`; it needs numpy, see `ai/README.md`) and import it with `--made-up`.
 
@@ -124,7 +131,8 @@ Memory-Room/
 │  └─ tests/
 ├─ templates/           pages shared by the whole site (the frame, errors)
 ├─ static/css/site.css  the one stylesheet
-├─ static/viewer/       the 3D viewer, and three.js 0.170.0 (MIT) in vendor/
+├─ static/viewer/       the 3D viewer (room3d.js, roomgeom.js), and three.js 0.170.0 (MIT) in vendor/
+├─ static/site/         one script per page: landing, places, room, backdrop
 ├─ ai/                  the Colab notebook and the AI code it loads (not imported by Django)
 ├─ prebuilt/            code built ahead of time; what the app uses has been copied out of it
 └─ docs/                design, plans, system map, product record, filming guide, research
