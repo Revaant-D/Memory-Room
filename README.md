@@ -4,7 +4,7 @@ Film a room once on your phone. It becomes a 3D room you can turn and zoom aroun
 
 A Django web app for INFO 490, Project 2, by Revaant Daga. **This is the first draft (18 Nov 2026).** The write-up for the draft (product scope, AI plan and evidence, progress and roadmap) is [`FIRST_DRAFT.md`](FIRST_DRAFT.md).
 
-## What works today, and what doesn't yet
+## What works today
 
 **Works, in the app:**
 
@@ -17,8 +17,6 @@ A Django web app for INFO 490, Project 2, by Revaant Daga. **This is the first d
 - The admin site at `/admin/` shows every table.
 
 **Works, outside the app:** a Google Colab notebook (`ai/build_room_colab.ipynb`) that turns a room video into a 3D room with the MapAnything model, and a command that brings the result into the app. See [AI](#ai) below.
-
-**Not built yet:** the AI started from inside the app; photos placed in the room by the app (pins can only be added in the admin for now); placing a photo by hand; versions of a place; search; deployment. The roadmap is in `FIRST_DRAFT.md` §3.
 
 ## What you need
 
@@ -63,8 +61,18 @@ Then open http://127.0.0.1:8000/ and:
 
 1. Sign up.
 2. Create a place (for example "First flat").
-3. On the place's page, add a room video, then add several photos at once.
+3. On the place's page, add a room video (any short MP4 or MOV), then add several photos at once.
 4. Open a photo to give it a caption or change its date.
+
+### See the 3D room without a GPU
+
+A real room is built from the video by the AI in Colab (see [AI](#ai)). To see the 3D room page without that, attach the made-up demo room that ships with the app to the video you uploaded in step 3. In a new database, the first video uploaded is scan number 1:
+
+```powershell
+.venv\Scripts\python.exe manage.py import_room 1 --demo
+```
+
+Open the place's page again: it is now a 3D room you can turn and zoom, labelled "MADE-UP ROOM" because the stand-in model made it, not the AI. Your photos are in a row below it, dashed because they have no spot yet. Tap one, then tap the floor where it was taken: it is saved there as a pink dot, and stays after a reload.
 
 ## Run the tests
 
@@ -72,7 +80,7 @@ Then open http://127.0.0.1:8000/ and:
 .venv\Scripts\python.exe manage.py test
 ```
 
-276 tests, all passing on 18 Nov 2026. They use a temporary database and a temporary upload folder, so they never touch your own data.
+281 tests, all passing on 18 Nov 2026. They use a temporary database and a temporary upload folder, so they never touch your own data.
 
 The room page's geometry (turning the room to line up its walls, and telling floor from outside) has its own tests, run with Node 18 or newer:
 
@@ -109,7 +117,7 @@ From a room video to the 3D page:
    The command checks the room and refuses anything it cannot trust, with the reason: a failed run, a damaged points file, the wrong weights, or a made-up room (from the code's stand-in model) unless `--made-up` is given, in which case every page labels it "MADE-UP ROOM". It also refuses to replace a room whose photos have been placed, unless `--drop-pins` is given (a rebuilt room has its own frame, so the old spots would be wrong).
 4. Open the place's page: it is now the room.
 
-To try the page without a GPU, make the made-up demo room with the AI code (`python -m roompipe demo --out <folder>`, run from `ai/`; it needs numpy, see `ai/README.md`) and import it with `--made-up`.
+To try the page without a GPU, use `--demo` instead of a path (see [See the 3D room without a GPU](#see-the-3d-room-without-a-gpu)). It imports `rooms/demo_room/`, a made-up room the AI code's stand-in model wrote (`python -m roompipe demo --spacing 0.03 --align-walls`).
 
 ## Where things are
 
@@ -127,6 +135,7 @@ Memory-Room/
 │  ├─ validators.py     the checks on uploaded videos and photos
 │  ├─ roomfolder.py     reads and checks a room built in Colab
 │  ├─ management/commands/import_room.py   attaches a built room to a scan
+│  ├─ demo_room/        a made-up room for trying the 3D page (`import_room <scan> --demo`)
 │  ├─ views.py, urls.py, forms.py, templates/rooms/
 │  └─ tests/
 ├─ templates/           pages shared by the whole site (the frame, errors)

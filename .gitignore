@@ -23,6 +23,10 @@ ai/dist/
 # (prebuilt/viewer/demo/points.ply, a made-up room, was committed before this.)
 *.ply
 *.zip
+# The one exception: the made-up demo room (`import_room <scan> --demo`), made
+# by the stand-in model. It is not a real room; anyone who clones can try the
+# 3D page with it.
+!rooms/demo_room/points.ply
 
 # Model weights never go in git (class rule)
 *.bin

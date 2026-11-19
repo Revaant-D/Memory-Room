@@ -14,6 +14,7 @@ from pathlib import Path
 
 from django.core.management import CommandError, call_command
 
+from rooms.management.commands.import_room import DEMO_ROOM
 from rooms.models import Memory, Pin, Place, Scan
 from rooms.tests.utils import TempMediaTestCase, jpeg_file, make_user, video_file
 
@@ -318,6 +319,39 @@ class ImportRoomTests(TempMediaTestCase):
     def test_made_up_flag_on_a_real_room_refused(self):
         message = self.refused(self.scan.pk, self.write_room(), "--made-up")
         self.assertIn("--made-up", message)
+
+    # --- the demo room that ships with the app (--demo) ---
+
+    def test_demo_room_imported_and_labelled(self):
+        out = self.run_command(self.scan.pk, "--demo")
+        self.scan.refresh_from_db()
+        self.assertEqual(self.scan.status, Scan.Status.READY)
+        self.assertIs(self.scan.room_info["made_up"], True)
+        self.assertGreater(self.scan.room_info["n_points"], 1000)
+        self.assertIn("MADE-UP ROOM", out)
+        # The stored file is the shipped one, byte for byte.
+        with self.scan.points_file.open("rb") as stored:
+            self.assertEqual(stored.read(), (DEMO_ROOM / "points.ply").read_bytes())
+
+    def test_demo_room_page_says_made_up(self):
+        self.run_command(self.scan.pk, "--demo")
+        self.client.force_login(self.place.owner)
+        response = self.client.get(f"/scans/{self.scan.pk}/room/")
+        self.assertContains(response, "MADE-UP ROOM")
+
+    def test_demo_and_a_path_refused(self):
+        message = self.refused(self.scan.pk, self.write_room(), "--demo")
+        self.assertIn("--demo", message)
+
+    def test_no_path_and_no_demo_refused(self):
+        message = self.refused(self.scan.pk)
+        self.assertIn("--demo", message)
+
+    def test_demo_room_is_tracked_by_git(self):
+        # *.ply is ignored by .gitignore; the demo room's file is the one
+        # exception. A clone without it would make --demo fail.
+        ignore = (Path(__file__).resolve().parents[2] / ".gitignore").read_text(encoding="utf-8")
+        self.assertIn("!rooms/demo_room/points.ply", ignore)
 
     # --- finding the scan's number ---
 

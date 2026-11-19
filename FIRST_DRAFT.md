@@ -4,6 +4,21 @@ Revaant Daga · INFO 490, Project 2 · 18 Nov 2026
 
 This page is the first-draft write-up: the product scope (§1), the AI plan and the evidence so far (§2), and the progress and roadmap (§3). How to install and run the app is in [`README.md`](README.md).
 
+**Where each first-draft requirement is met:**
+
+| Requirement | Where |
+| --- | --- |
+| 1. Updated product scope | §1 below |
+| 2. A Django project and at least one app | `config/` (the project); two apps, `accounts/` and `rooms/` |
+| 2. At least two models, with a relationship | Five models: `User` (`accounts/models.py`); `Place`, `Scan`, `Memory`, `Pin` (`rooms/models.py`). A user has places; a place has scans and photos; a `Pin` joins a photo to a scan at x, y, z. Five migrations in `rooms/migrations/` |
+| 2. Views and templates | `rooms/views.py`, `rooms/pins.py`, `accounts/views.py`; every page extends `templates/base.html` (all but the bare server-error page), and forms share one include for their fields (`templates/includes/form_fields.html`) |
+| 2. Forms and user input | Sign-up (`accounts/forms.py`); a place's name, a room video, up to 50 photos at once, a caption and date (`rooms/forms.py`). Uploads are checked by their content, not only their names (`rooms/validators.py`), and each form says what is wrong |
+| 2. A database-backed workflow | Add photos: the form → `memory_create` → one `Memory` row each → shown on the place's page. Place a photo: a tap in the 3D room → `pin_save` (JSON) → a `Pin` row → a dot that stays after a reload |
+| 2. Logins and private data | `@login_required` on every page that holds a person's data; every lookup goes through an owner check (`rooms/access.py`), so another person's place, photo or room is "page not found" |
+| 3. The AI plan and evidence | §2 below, with the first real run on a GPU (18 Nov) |
+| 4. Progress and roadmap | §3 below |
+| 5. GitHub and how to run it | `README.md`. 281 tests: `manage.py test`. The 3D page can be tried without a GPU: `manage.py import_room <scan> --demo` |
+
 ---
 
 ## 1. Product scope
@@ -21,7 +36,7 @@ This page is the first-draft write-up: the product scope (§1), the AI plan and 
 | # | Feature | What the user does | Works today (18 Nov) |
 | --- | --- | --- | --- |
 | 1 | **Capture** | Films the room once; gets back a 3D room to turn and zoom | Uploading the room video works in the app. The 3D room is built by an AI model in a Colab notebook, outside the app (§2), brought in with one command, and shown on a 3D page in the app |
-| 2 | **Memory map** | Adds photos; sees each as a dot where it was taken; places by hand the ones the AI could not | Adding many photos at once works, with captions and dates, private to their owner. The 3D page draws placed photos as dots; tapping one shows the photo. AI placement is coded but not yet connected to the app, and hand placement is not built |
+| 2 | **Memory map** | Adds photos; sees each as a dot where it was taken; places by hand the ones the AI could not | Adding many photos at once works, with captions and dates, private to their owner. The place's page is the 3D room, with placed photos as dots; tapping one flies to where it was taken and shows it. A photo with no spot yet is placed by hand: tap it, then the floor where it was taken. AI placement is coded but not yet connected to the app |
 | 3 | **Versions over time** | Films the place again later; switches between versions; each photo shows in the version it belongs to | The database already allows several scans per place, and a photo's position belongs to one scan. Lining two scans up is not started |
 
 **How it differs from what exists**
@@ -36,7 +51,8 @@ This page is the first-draft write-up: the product scope (§1), the AI plan and 
 
 - **Kept:** the technical core. An ordinary phone video becomes a metric 3D room through MapAnything; Django; a three.js viewer.
 - **Dropped:** the browser extension, the fit editor, the clearance checks, furniture detection, and ARCore camera tracking.
-- **Why:** **[B4: the builder's one sentence goes here.]**
+- **Why:** Memory Room has a larger use and a larger audience. Clearance would be used a handful of times, around a few purchases, and then lose its purpose, and it served a narrow audience that would be hard to reach. Memory Room is for anyone who wants to keep a 3D version of a place they have lived in, and it is something people come back to.
+- **Wireframes:** the P2-A2 wireframes were drawn for Clearance and no longer apply. The working pages take their place; `README.md` ("Run it" and "See the 3D room without a GPU") walks through each of them.
 
 ---
 
@@ -175,10 +191,10 @@ The room is recognisable: the L-shaped floor, the walls, the bed in its alcove a
 
 | Task | Current status (18 Nov) | Responsible member | Expected completion |
 | --- | --- | --- | --- |
-| **Django Core Features** | Done: sign-up and login; places (create, rename, delete); room video upload; photos (many at once, captions, dates, delete); a 3D room page for each built scan, with photos as dots. Each user sees only their own. 240 tests pass. Remaining: placing a photo by hand on the 3D page, pages to switch between versions | Revaant Daga (solo) | 2 Dec |
-| **Database and APIs** | Done: four models with relationships (a user's Place has Scans and Memories; a Pin joins a Memory to a Scan at x, y, z), migrations, admin; a command that imports a built room and its facts. Remaining: a JSON API (a room with its pins; move a pin), search and a timeline of a place's photos | Revaant Daga (solo) | 1 Dec |
-| **AI Integration** | Done: the room-building and photo-placing code, in a Colab notebook, tested with a stand-in model; a command that brings a built room into the app. First real run on 18 Nov on a Colab T4; that room is in the app. Remaining: correcting the room's scale; Django starts the GPU job; placement with highlighted photos and hand placement; refining a hand-placed photo; lining up two scans | Revaant Daga (solo) | 5 Dec |
-| **Evaluation and Testing** | Done: 240 Django tests and 109 AI tests; a code review of the whole first draft (18 Nov: 15 findings, 12 fixed with a test each, 3 deferred); the first real run, checked against a tape measure, is the first evaluation row (§2, Evidence). Remaining: five realistic tests in a table, two real failures, one improvement with before and after | Revaant Daga (solo) | 5 Dec |
+| **Django Core Features** | Done: sign-up and login; places (create, rename, delete); room video upload; photos (many at once, captions, dates, delete); the place's page is its 3D room, with photos as dots; placing a photo by hand by tapping the floor. Each user sees only their own. 281 tests pass. Remaining: pages to switch between versions | Revaant Daga (solo) | 2 Dec |
+| **Database and APIs** | Done: four models with relationships (a user's Place has Scans and Memories; a Pin joins a Memory to a Scan at x, y, z), migrations, admin; a command that imports a built room and its facts; one JSON endpoint, which saves a hand-placed photo's spot. Remaining: a fuller JSON API (a room with its pins; move or remove a pin), search and a timeline of a place's photos | Revaant Daga (solo) | 1 Dec |
+| **AI Integration** | Done: the room-building and photo-placing code, in a Colab notebook, tested with a stand-in model; a command that brings a built room into the app. First real run on 18 Nov on a Colab T4; that room is in the app. Remaining: correcting the room's scale; Django starts the GPU job; the AI's placements shown in the app, with the photos it could not place highlighted for hand placement (which already works); refining a hand-placed photo; lining up two scans | Revaant Daga (solo) | 5 Dec |
+| **Evaluation and Testing** | Done: 281 Django tests, 5 tests of the 3D page's geometry, and 109 AI tests; a code review of the whole first draft (18 Nov: 15 findings, 12 fixed with a test each, 3 deferred); the first real run, checked against a tape measure, is the first evaluation row (§2, Evidence). Remaining: five realistic tests in a table, two real failures, one improvement with before and after | Revaant Daga (solo) | 5 Dec |
 | **Deployment** | Not started. Runs locally (SQLite, files on disk). Remaining: a live host, a GPU service, two options compared on cost, what changes at 10,000 daily users, security | Revaant Daga (solo) | 6 Dec |
 | **Documentation** | Done: `README.md`, this page, a system map, the AI README, a filming guide. Remaining: `README_AI.md` and the three-minute video | Revaant Daga (solo) | 8 Dec |
 
@@ -189,9 +205,18 @@ The room is recognisable: the L-shaped floor, the walls, the bed in its alcove a
 | 29 Nov | JSON API: a room with its pins; move a pin. Django starts the GPU job |
 | 1 Dec | Search and a timeline of a place's photos (the data feature) |
 | 2 Dec | Versions pages: switch between scans of a place |
-| 3 Dec | Placement in the app: AI pins, highlighted photos, hand placement |
+| 3 Dec | Placement in the app: AI pins, and the photos it could not place highlighted for hand placement |
 | 5 Dec | Refining a hand-placed photo; lining up two scans; the evaluation |
 | 6 Dec | Deployment and its write-up |
 | 8 Dec | `README_AI.md`, the three-minute video, final push |
 
-**Next after this draft**, in order: Django starts the GPU job; the viewer shows AI-placed photos and lets the user place the rest; the JSON API; search and a timeline; versions; the evaluation; deployment; documentation and the video.
+**Risks, and the fallback for each:**
+
+| Risk | Why it is a risk | Fallback |
+| --- | --- | --- |
+| Photo placement by the AI | It placed 0 of 2 photos in the first real run: the room's frames lined up only to within 1.16 m on the second pass (limit 15 cm) | Placing by hand already works, so every photo can still be placed. Try the alternative method (match the photo's details against the room's frames, then solve for the camera) |
+| Django starting the GPU job | Not tried yet; the model needs a GPU with about 11 GB free, which the laptop does not have | Keep Colab with the `import_room` command, which already runs the same checks, and explain why in the deployment write-up |
+| Versions over time | Lining up two scans of one room is untested | Show two versions side by side, each with its own photos |
+| The room's scale | The first room came out about 10% small against a tape | Scale the room from one length the user enters (the leading candidate for the evaluation's "one improvement") |
+
+**Next after this draft**, in order: Django starts the GPU job; the room page shows the AI's placements and highlights the photos it could not place; the JSON API; search and a timeline; versions; the evaluation; deployment; documentation and the video.

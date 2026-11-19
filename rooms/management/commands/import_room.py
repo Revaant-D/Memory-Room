@@ -1,4 +1,5 @@
 """manage.py import_room <scan number> <room folder or .zip> [--made-up]
+   manage.py import_room <scan number> --demo
 
 Brings a room built by the Colab notebook into the app: checks it
 (rooms/roomfolder.py), stores its points.ply as the scan's points file, keeps
@@ -8,6 +9,11 @@ page then shows it.
 For the first draft this is how a built room reaches Django (the builder's
 decision, 17 Nov 2026). By 8 Dec a Django view starts the GPU job itself, and
 its result goes through the same checks.
+
+--demo imports the made-up room that ships with the app (rooms/demo_room/,
+made by the AI code's stand-in model), so anyone who clones the project can
+see the 3D room page without a GPU. Like any made-up room, every page labels
+it MADE-UP ROOM.
 """
 
 import shutil
@@ -22,13 +28,24 @@ from django.utils import timezone
 from rooms.models import Scan
 from rooms.roomfolder import POINTS_FILE, RoomError, check_room, open_room
 
+# The made-up room for --demo: `python -m roompipe demo --spacing 0.03
+# --align-walls`, its room.json and points.ply only (18 Nov 2026).
+DEMO_ROOM = Path(__file__).resolve().parents[2] / "demo_room"
+
 
 class Command(BaseCommand):
     help = "Attach a room built by the Colab notebook to a scan, and mark the scan ready."
 
     def add_arguments(self, parser):
         parser.add_argument("scan_id", type=int, help="the scan's number (the admin site lists them)")
-        parser.add_argument("room", help="the room folder, or the .zip the notebook made")
+        parser.add_argument(
+            "room", nargs="?", help="the room folder, or the .zip the notebook made (leave out with --demo)"
+        )
+        parser.add_argument(
+            "--demo",
+            action="store_true",
+            help="import the made-up demo room that ships with the app; pages label it MADE-UP ROOM",
+        )
         parser.add_argument(
             "--made-up",
             action="store_true",
@@ -40,7 +57,14 @@ class Command(BaseCommand):
             help="replace a room whose scan has placed photos, and delete those placements",
         )
 
-    def handle(self, scan_id, room, made_up, drop_pins=False, **options):
+    def handle(self, scan_id, room, made_up, demo=False, drop_pins=False, **options):
+        if demo and room:
+            raise CommandError("Give a room folder or --demo, not both.")
+        if not demo and not room:
+            raise CommandError("Give the room folder or .zip to import, or --demo for the made-up demo room.")
+        if demo:
+            room, made_up = DEMO_ROOM, True
+
         try:
             scan = Scan.objects.get(pk=scan_id)
         except Scan.DoesNotExist:

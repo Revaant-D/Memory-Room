@@ -576,7 +576,10 @@ Takes the room folder (or zip) that the Colab notebook made, checks it, attaches
 
 ```powershell
 .venv\Scripts\python.exe manage.py import_room <scan number> <room folder or .zip> [--made-up]
+.venv\Scripts\python.exe manage.py import_room <scan number> --demo
 ```
+
+`--demo` (added 18 Nov, evening) imports `rooms/demo_room/`, a made-up room that ships with the app, so that anyone who clones the project can see the 3D page without a GPU. It is the same import as `<path> --made-up`, with the path filled in, so the room passes the same checks and every page labels it MADE-UP ROOM.
 
 The scan number is the "Id" column in the admin site's Scans list (`/admin/rooms/scan/`), added for this command.
 
@@ -588,7 +591,8 @@ The scan number is the "Id" column in the admin site's Scans list (`/admin/rooms
 | `rooms/roomfolder.py` | Finds the room in a folder or zip; reads `room.json` and `run.json`; checks `points.ply` byte by byte against the layout the AI code writes; decides "made up" and "allowed model". Standard library only |
 | `rooms/models.py` | `Scan.room_info` (new, migration `0004_scan_room_info`); the points file now ends `-points.ply` |
 | `rooms/admin.py` | The Scans list shows each scan's number ("Id") |
-| `rooms/tests/test_import_room.py` | 22 tests (21 for the command, 1 for the admin column) |
+| `rooms/demo_room/` | The made-up demo room for `--demo`: `room.json` and `points.ply` (55,565 points, 834 KB) from `python -m roompipe demo --spacing 0.03 --align-walls`. `.gitignore` ignores `*.ply` except this one file |
+| `rooms/tests/test_import_room.py` | 27 tests (26 for the command, 1 for the admin column) |
 
 ### How one import flows
 
@@ -609,11 +613,14 @@ The scan number is the "Id" column in the admin site's Scans list (`/admin/rooms
 | `--made-up` on a real room is refused | Claude, 18 Nov | So the label is never wrong in either direction |
 | A room from any weights other than `facebook/map-anything-apache` is refused | Claude, 18 Nov | The project's licence rule, checked where the result enters the app as well as where the model loads |
 | The PLY is checked byte by byte; the count must match `room.json` | Claude, 18 Nov | A file the viewer would misread fails here, with a reason, instead of showing a broken room |
+| A made-up demo room ships with the app, imported with `--demo` | Claude, 18 Nov, evening (the builder asked for everything that could be done before the first-draft push) | A grader who clones the project has no GPU and no room; without it the 3D page, the product's main screen, cannot be seen. It is made by the stand-in model, so it shows no real room, and it is labelled made up. Thinned to 3 cm (834 KB) to keep the repository small |
 
 ### Checked
 
 - 21 tests (the whole suite: 216, 18 Nov). A good room from a folder, a zip, a zip with one folder inside, a folder holding one room folder; importing again replaces the file; and each refusal: unknown scan, nothing at the path, a failed run (its reason quoted), another version, no PLY, not a PLY, another layout, cut short, counts that disagree, no model named, the non-commercial weights, a made-up room without the flag (seen in `run.json` or in `room.json`), and the flag on a real room.
 - On a scratch copy of the app, the demo room from `python -m roompipe demo` (written by the AI code's own PLY writer), zipped the way the notebook zips: refused without `--made-up`; with it, "Scan 1 is ready: 98,329 points, in a box 4.17 x 3.24 m across and 2.50 m high"; the stored file is byte-for-byte the room's `points.ply`; importing the folder again left one points file on disk.
+
+- `--demo`, 18 Nov evening: 5 tests (imported and labelled, the page says MADE-UP ROOM, `--demo` with a path refused, neither refused, the `.gitignore` exception present); suite **281**. Run on a fresh clone; see the run sheet's C10.
 
 ### Known gaps
 
