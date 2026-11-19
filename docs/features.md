@@ -157,6 +157,13 @@ From the system guide (16 Nov) and the critical review (17 Nov). None of these i
 - **Another model if the room disappoints:** Depth Anything 3 (Base, Small and Metric-Large are Apache-licensed).
 - **Correct the room's scale from one known length** (18 Nov): the first real room came out about 10% small against a tape. The user enters one length (the bed's height, a wall), and the whole room is scaled by it. Cheaper than AI feature 6, and the leading candidate for the evaluation's "one improvement".
 
+Added 18 Nov, evening (builder's go-ahead; to choose among after the first draft, once AI placement runs in the app):
+
+- **Timeline slider:** drag through the dates and watch the dots appear in the order the photos were taken. Cheap: every photo already has a date.
+- **Then and now:** fade the photo over the 3D view from the same spot. Most of it exists: a pin can already hold which way the camera faced (`Pin.camera`).
+- **Notes and voice memos in the room:** pin a few words or a recording to a spot, not only a photo ("the desk where I wrote my thesis").
+- **A read-only share link for a place:** sharing is already wanted (Product decisions); this is the smallest form of it.
+
 ## Where the ideas came from
 
 - `docs/Clearance_Project_Idea_Description (older idea).pdf`: the P2-A2 submission.
