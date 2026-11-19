@@ -187,8 +187,6 @@ The room is recognisable: the L-shaped floor, the walls, the bed in its alcove a
 
 ## 3. Progress and roadmap
 
-<!-- B7: the builder confirms these dates. -->
-
 | Task | Current status (18 Nov) | Responsible member | Expected completion |
 | --- | --- | --- | --- |
 | **Django Core Features** | Done: sign-up and login; places (create, rename, delete); room video upload; photos (many at once, captions, dates, delete); the place's page is its 3D room, with photos as dots; placing a photo by hand by tapping the floor. Each user sees only their own. 281 tests pass. Remaining: pages to switch between versions | Revaant Daga (solo) | 2 Dec |
