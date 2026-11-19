@@ -25,7 +25,7 @@ This page is the first-draft write-up: the product scope (§1), the AI plan and 
 
 **Memory Room.** Film a room once on your phone. It becomes a 3D room you can turn and zoom around, and the photos you took in that room show up as dots at the spots where they were taken.
 
-**The problem.** People take hundreds of photos in the places they live, and those photos end up scattered through a camera roll that is rarely opened again. One vendor survey (Popsa, 8,000 people, reported second-hand in a trade article) found that almost three-quarters of phone photos are never looked at again. When you leave a place, you lose the place itself, and the photos taken there give you no way back into it.
+**The problem.** People take hundreds of photos in the places they live, and those photos end up scattered through a camera roll that is rarely opened again. One vendor survey (Popsa, *The Memory Economy*, 2026: 8,000 people in the UK, US, France and Germany, run by Censuswide) found that 70% of phone photos are never looked at again. When you leave a place, you lose the place itself, and the photos taken there give you no way back into it.
 
 **Target users.** Anyone who wants to keep the memories of a place: a first apartment, a dorm room before move-out, a family home before it is sold, a childhood bedroom.
 

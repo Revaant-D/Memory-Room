@@ -20,7 +20,7 @@ A Django web app for INFO 490, Project 2, by Revaant Daga. **This is the first d
 
 ## What you need
 
-- Python 3.14
+- Python 3.13 or newer (tested on 3.13 and 3.14)
 - git
 
 Nothing else: the database is SQLite (a file), and uploads are stored on disk in `media/`.
@@ -47,7 +47,7 @@ python3.14 -m venv .venv
 .venv/bin/python manage.py migrate
 ```
 
-The commands call the environment's Python by its path, so nothing needs activating. On macOS and Linux, use `.venv/bin/python` wherever this file says `.venv\Scripts\python.exe`.
+With Python 3.13, write `py -3.13` or `python3.13` in place of the 3.14 commands above. The commands call the environment's Python by its path, so nothing needs activating. On macOS and Linux, use `.venv/bin/python` wherever this file says `.venv\Scripts\python.exe`.
 
 Optional, to use the admin site: `.venv\Scripts\python.exe manage.py createsuperuser`.
 
@@ -80,7 +80,7 @@ Open the place's page again: it is now a 3D room you can turn and zoom, labelled
 .venv\Scripts\python.exe manage.py test
 ```
 
-281 tests, all passing on 18 Nov 2026. They use a temporary database and a temporary upload folder, so they never touch your own data.
+395 tests in all, all passing on 18 Nov 2026: 281 Django tests (this command), 109 AI tests and 5 tests of the room page's geometry (both below). The Django tests use a temporary database and a temporary upload folder, so they never touch your own data.
 
 The room page's geometry (turning the room to line up its walls, and telling floor from outside) has its own tests, run with Node 18 or newer:
 
@@ -156,3 +156,7 @@ Memory-Room/
 - `docs/reference/`: the class brief (condensed) and the research behind the idea.
 
 Made when the app runs, never in git: `.venv/`, `db.sqlite3`, `.secret_key`, `media/`.
+
+## License
+
+The code in this repository is under the MIT License (`LICENSE`). The MapAnything model weights the AI uses (`facebook/map-anything-apache`) are Meta's, under the Apache 2.0 licence; they are downloaded at run time and are not in this repository.

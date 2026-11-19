@@ -1,5 +1,7 @@
 # prebuilt/ : work done ahead, waiting for the builder
 
+> **Archive.** Everything the app uses from here has been copied into `ai/`, `rooms/` and `static/viewer/`; the app loads nothing from this folder. It is kept as a record of the work built ahead on 16 Nov 2026.
+
 **Read this first if you are a new Claude session.** Then read `CLAUDE.md` as usual.
 
 ## What this folder is
